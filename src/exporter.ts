@@ -61,7 +61,10 @@ async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): 
     });
 }
 
-async function openRenderedPage(tempHtmlPath: string): Promise<{ browser: Browser; page: Page; renderErrors: string[] }> {
+async function openRenderedPage(
+    tempHtmlPath: string,
+    renderTimeoutMilliSecond: number
+): Promise<{ browser: Browser; page: Page; renderErrors: string[] }> {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
@@ -70,7 +73,7 @@ async function openRenderedPage(tempHtmlPath: string): Promise<{ browser: Browse
     });
 
     await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
-        timeout: 15000
+        timeout: renderTimeoutMilliSecond
     });
 
     const renderErrors = await page.evaluate(() => {
@@ -155,6 +158,8 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             const includeUml = config.get<boolean>('includeUml', true);
             const includeKroki = config.get<boolean>('includeKroki', true);
             const pdfFormat = config.get<'A4' | 'Letter'>('pdfFormat', 'A4');
+            const configuredTimeout = config.get<number>('renderTimeoutMilliSecond', config.get<number>('renderTimeoutMs', 10000));
+            const renderTimeoutMilliSecond = Math.max(1000, configuredTimeout);
 
             progress.report({ message: '図を解析しています...', increment: 15 });
             const krokiSvgMap = await collectKrokiSvgs(markdownText, { includeUml, includeKroki });
@@ -183,7 +188,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             let exportCompleted = false;
             try {
                 progress.report({ message: 'ブラウザ描画を待機しています...', increment: 25 });
-                const opened = await openRenderedPage(tempHtmlPath);
+                const opened = await openRenderedPage(tempHtmlPath, renderTimeoutMilliSecond);
                 browser = opened.browser;
                 renderErrors = opened.renderErrors;
 
@@ -216,7 +221,14 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                 progress.report({ increment: 20 });
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
-                vscode.window.showErrorMessage(`出力に失敗しました: ${message}`);
+                const isTimeout = /Waiting failed:.*ms exceeded|Timed out|timeout/i.test(message);
+                if (isTimeout) {
+                    vscode.window.showErrorMessage(
+                        `出力に失敗しました: 描画待機がタイムアウトしました（現在: ${renderTimeoutMilliSecond} milli second, 設定: documenticMarkdown.renderTimeoutMilliSecond）。詳細: ${message}`
+                    );
+                } else {
+                    vscode.window.showErrorMessage(`出力に失敗しました: ${message}`);
+                }
             } finally {
                 try {
                     await browser?.close();

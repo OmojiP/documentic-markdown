@@ -42,6 +42,7 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 - `documenticMarkdown.includeKroki`: UML以外のKroki形式埋め込みを有効化（既定: true）
 - `documenticMarkdown.pdfFormat`: `A4` or `Letter`
 - `documenticMarkdown.openOutputAfterExport`: 出力後に自動で開く（既定: true）
+- `documenticMarkdown.renderTimeoutMilliSecond`: Mermaid/Math描画待機タイムアウト（ミリ秒、既定: 10000）
 
 ## 技術的な説明（簡潔版）
 
