@@ -189,6 +189,7 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
     <script type="module">
       window.__MERMAID_RENDER_DONE__ = false;
             window.__MATH_RENDER_DONE__ = false;
+            window.__RENDER_ERRORS__ = [];
       try {
         const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
         mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
@@ -196,6 +197,8 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
         if (blocks.length > 0) {
           await mermaid.run({ nodes: blocks });
         }
+            } catch (error) {
+                                window.__RENDER_ERRORS__.push('Mermaid render failed: ' + (error?.message ?? String(error)));
       } finally {
         window.__MERMAID_RENDER_DONE__ = true;
       }
@@ -205,8 +208,8 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
                 if (mathBlocks.length > 0) {
                     window.MathJax = {
                         tex: {
-                            inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-                            displayMath: [['\\\\[', '\\\\]']]
+                            inlineMath: [['$', '$'], ['\\(', '\\)']],
+                            displayMath: [['\\[', '\\]']]
                         },
                         svg: { fontCache: 'global' }
                     };
@@ -224,6 +227,8 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
                         await window.MathJax.typesetPromise();
                     }
                 }
+            } catch (error) {
+                                window.__RENDER_ERRORS__.push('Math render failed: ' + (error?.message ?? String(error)));
             } finally {
                 window.__MATH_RENDER_DONE__ = true;
             }
