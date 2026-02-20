@@ -1,86 +1,7 @@
-# All-in-One Markdown + Diagram Test
 
-このファイルは、Markdown の主要構文と、拡張が対応する図コードブロックをまとめて検証するためのサンプルです。
+# Kroki対応形式（非UML）テスト
 
----
-
-## 1. 見出し
-
-### H3
-
-#### H4
-
-## 2. テキスト装飾
-
-- **太字**
-- *斜体*
-- ~~打ち消し~~
-- `inline code`
-- [リンク](https://example.com)
-
-## 3. 引用
-
-> これは引用です。
->
-> - 引用内リスト
-> - 2つ目
-
-## 4. リスト
-
-1. 番号付き 1
-2. 番号付き 2
-   - ネスト箇条書き A
-   - ネスト箇条書き B
-
-- [x] タスク完了
-- [ ] タスク未完了
-
-## 5. 表
-
-| 項目  |   値 | 備考   |
-| ----- | ---: | ------ |
-| alpha |   10 | 左揃え |
-| beta  |   20 | 右揃え |
-
-## 6. コードブロック（通常）
-
-```ts
-function greet(name: string): string {
-  return `Hello, ${name}`;
-}
-```
-
-## 7. Mermaid（ローカル描画）
-
-```mermaid
-graph TD
-  A[Start] --> B{Check}
-  B -->|Yes| C[Done]
-  B -->|No| D[Retry]
-  D --> B
-```
-
-## 8. UML / PlantUML（Kroki）
-
-```uml
-@startuml
-Alice -> Bob: Hello
-Bob --> Alice: Hi
-@enduml
-```
-
-```plantuml
-@startuml
-actor User
-participant App
-User -> App: Export Markdown
-App --> User: PDF Ready
-@enduml
-```
-
-## 9. Kroki対応形式（非UML）
-
-### graphviz
+## graphviz
 
 ```graphviz
 digraph G {
@@ -89,14 +10,14 @@ digraph G {
 }
 ```
 
-### d2
+## d2
 
 ```d2
 a -> b: hello
 b -> c: world
 ```
 
-### erd
+## erd
 
 ```erd
 [users]
@@ -110,7 +31,7 @@ user_id
 users 1--* orders
 ```
 
-### svgbob
+## svgbob
 
 ```svgbob
 +--------+
@@ -123,7 +44,7 @@ users 1--* orders
 +--------+
 ```
 
-### vega
+## vega
 
 ```vega
 {
@@ -161,9 +82,7 @@ users 1--* orders
 }
 ```
 
-## 10. Kroki対応形式（全対応フェンス実例）
-
-### actdiag
+## actdiag
 
 ```actdiag
 actdiag {
@@ -171,7 +90,7 @@ actdiag {
 }
 ```
 
-### blockdiag
+## blockdiag
 
 ```blockdiag
 blockdiag {
@@ -179,7 +98,7 @@ blockdiag {
 }
 ```
 
-### bpmn
+## bpmn
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
@@ -197,14 +116,77 @@ blockdiag {
 </bpmn:definitions>
 ```
 
-### bytefield
+## bytefield
 
 ```bytefield
-draw_column_labels {bit 7, bit 0}
-box {8} "byte"
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+
+(defn draw-group-label-header
+  [span label]
+  (draw-box (text label [:math {:font-size 12}]) {:span span :borders #{} :height 14}))
+
+(defn draw-remotedb-header
+  [kind args]
+  (draw-column-headers)
+  (draw-group-label-header 5 "start")
+  (draw-group-label-header 5 "TxID")
+  (draw-group-label-header 3 "type")
+  (draw-group-label-header 2 "args")
+  (draw-group-label-header 1 "tags")
+  (next-row 18)
+
+  (draw-box 0x11 :bg-green)
+  (draw-box 0x872349ae [{:span 4} :bg-green])
+  (draw-box 0x11 :bg-yellow)
+  (draw-box (text "TxID" :math) [{:span 4} :bg-yellow])
+  (draw-box 0x10 :bg-pink)
+  (draw-box (hex-text kind 4 :bold) [{:span 2} :bg-pink])
+  (draw-box 0x0f :bg-cyan)
+  (draw-box (hex-text args 2 :bold) :bg-cyan)
+  (draw-box 0x14 :bg-purple)
+
+  (draw-box (text "0000000c" :hex [[:plain {:font-weight "light" :font-size 16}] " (12)"]) [{:span 4} :bg-purple])
+  (draw-box (hex-text 6 2 :bold) [:box-first :bg-purple])
+  (doseq [val [6 6 3 6 6 6 6 3]]
+    (draw-box (hex-text val 2 :bold) [:box-related :bg-purple]))
+  (doseq [val [0 0]]
+    (draw-box val [:box-related :bg-purple]))
+  (draw-box 0 [:box-last :bg-purple]))
+
+(draw-remotedb-header 0x4702 9)
+
+(draw-box 0x11)
+(draw-box 0x2104 {:span 4})
+(draw-box 0x11)
+(draw-box 0 {:span 4})
+(draw-box 0x11)
+(draw-box (text "length" [:math] [:sub 1]) {:span 4})
+(draw-box 0x14)
+
+(draw-box (text "length" [:math] [:sub 1]) {:span 4})
+(draw-gap "Cue and loop point bytes")
+
+(draw-box nil :box-below)
+(draw-box 0x11)
+(draw-box 0x36 {:span 4})
+(draw-box 0x11)
+(draw-box (text "num" [:math] [:sub "hot"]) {:span 4})
+(draw-box 0x11)
+(draw-box (text "num" [:math] [:sub "cue"]) {:span 4})
+
+(draw-box 0x11)
+(draw-box (text "length" [:math] [:sub 2]) {:span 4})
+(draw-box 0x14)
+(draw-box (text "length" [:math] [:sub 2]) {:span 4})
+(draw-gap "Unknown bytes" {:min-label-columns 6})
+(draw-bottom)
 ```
 
-### c4plantuml
+## c4plantuml
 
 ```c4plantuml
 @startuml
@@ -215,7 +197,7 @@ Rel(user, app, "uses")
 @enduml
 ```
 
-### dbml
+## dbml
 
 ```dbml
 Table users {
@@ -224,7 +206,7 @@ Table users {
 }
 ```
 
-### ditaa
+## ditaa
 
 ```ditaa
 +--------+    +--------+
@@ -232,28 +214,17 @@ Table users {
 +--------+    +--------+
 ```
 
-### excalidraw
+## excalidraw
 
-```excalidraw
-{
-  "type": "excalidraw",
-  "version": 2,
-  "source": "https://excalidraw.com",
-  "elements": [],
-  "appState": {
-    "gridSize": null
-  },
-  "files": {}
-}
-```
+stop
 
-### nomnoml
+## nomnoml
 
 ```nomnoml
 [Client]->[Server]
 ```
 
-### nwdiag
+## nwdiag
 
 ```nwdiag
 nwdiag {
@@ -263,7 +234,7 @@ nwdiag {
 }
 ```
 
-### packetdiag
+## packetdiag
 
 ```packetdiag
 packetdiag {
@@ -271,7 +242,7 @@ packetdiag {
 }
 ```
 
-### pikchr
+## pikchr
 
 ```pikchr
 box "A"
@@ -279,7 +250,7 @@ arrow right
 box "B"
 ```
 
-### rackdiag
+## rackdiag
 
 ```rackdiag
 rackdiag {
@@ -289,7 +260,7 @@ rackdiag {
 }
 ```
 
-### seqdiag
+## seqdiag
 
 ```seqdiag
 seqdiag {
@@ -297,7 +268,7 @@ seqdiag {
 }
 ```
 
-### structurizr
+## structurizr
 
 ```structurizr
 workspace {
@@ -316,7 +287,7 @@ workspace {
 }
 ```
 
-### umlet
+## umlet
 
 ```umlet
 <?xml version="1.0" encoding="UTF-8"?>
@@ -334,7 +305,7 @@ workspace {
 </diagram>
 ```
 
-### vegalite
+## vegalite
 
 ```vegalite
 {
@@ -349,7 +320,7 @@ workspace {
 }
 ```
 
-### wavedrom
+## wavedrom
 
 ```wavedrom
 { "signal": [
@@ -358,7 +329,7 @@ workspace {
 ]}
 ```
 
-### wireviz
+## wireviz
 
 ```wireviz
 connectors:
@@ -371,25 +342,3 @@ connections:
   - - X1: ["1", "2"]
     - W1: [1,2]
 ```
-
-### tex
-
-```tex
-\frac{a^2 + b^2}{c^2} = 1
-```
-
----
-
-## 11. 画像
-
-![sample image](https://dummyimage.com/600x120/eeeeee/333333&text=Markdown+PDF+Test)
-
-## 12. 区切り線
-
----
-
-## 13. 最終確認メモ
-
-- Mermaid はローカル描画
-- UML/PlantUML と Kroki対応形式は Kroki 経由
-- 変換失敗時はコードブロック表示にフォールバック
