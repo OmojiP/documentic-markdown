@@ -1,7 +1,7 @@
 {
     "name": "documentic-markdown-pdf",
     "displayName": "Documentic Markdown PDF",
-    "description": "Export Markdown to PDF with Mermaid SVG and optional UML embedding.",
+    "description": "Export Markdown to PDF with Mermaid and Kroki-based diagram embedding.",
     "version": "0.0.1",
     "publisher": "local",
     "engines": {
@@ -29,6 +29,11 @@
                     "default": true,
                     "description": "Enable PlantUML/UML fenced block conversion to SVG via Kroki."
                 },
+                "documenticMarkdown.includeKroki": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable non-UML Kroki-supported fenced block conversion to SVG."
+                },
                 "documenticMarkdown.pdfFormat": {
                     "type": "string",
                     "enum": [
@@ -49,13 +54,11 @@
     "devDependencies": {
         "@types/markdown-it": "^14.1.2",
         "@types/node": "^22.10.2",
-        "@types/pako": "^2.0.3",
         "@types/vscode": "^1.96.0",
         "typescript": "^5.7.2"
     },
     "dependencies": {
         "markdown-it": "^14.1.0",
-        "pako": "^2.1.0",
         "puppeteer": "^24.2.0"
     }
 }

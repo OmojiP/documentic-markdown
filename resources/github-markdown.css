@@ -42,12 +42,41 @@ body {
     padding: 6px 13px;
 }
 
+.markdown-body blockquote {
+    margin: 0;
+    padding: 0 1em;
+    color: #57606a;
+    border-left: 0.25em solid #d0d7de;
+}
+
 .mermaid {
+    margin: 16px 0;
     text-align: center;
 }
 
-.plantuml-svg {
+.kroki-svg {
+    margin: 16px 0;
     text-align: center;
+}
+
+.math-block {
+    margin: 16px 0;
+    text-align: center;
+}
+
+.mermaid svg,
+.kroki-svg svg {
+    display: block;
+    width: min(100%, 720px);
+    height: auto;
+    margin: 0 auto;
+}
+
+.math-block svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
 }
 
 @media print {

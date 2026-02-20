@@ -3,8 +3,44 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import MarkdownIt from 'markdown-it';
-import pako from 'pako';
 import puppeteer, { type Browser } from 'puppeteer';
+
+type KrokiRenderOptions = {
+    includeUml: boolean;
+    includeKroki: boolean;
+};
+
+const UML_LANGUAGE = 'plantuml';
+const KROKI_LANGUAGES = new Set([
+    'actdiag',
+    'blockdiag',
+    'bpmn',
+    'bytefield',
+    'c4plantuml',
+    'dbml',
+    'd2',
+    'ditaa',
+    'erd',
+    'excalidraw',
+    'graphviz',
+    'mermaid',
+    'nomnoml',
+    'nwdiag',
+    'packetdiag',
+    'pikchr',
+    'plantuml',
+    'rackdiag',
+    'seqdiag',
+    'structurizr',
+    'svgbob',
+    'tikz',
+    'umlet',
+    'vega',
+    'vegalite',
+    'wavedrom',
+    'wireviz',
+    'uml'
+]);
 
 function escapeHtml(value: string): string {
     return value
@@ -15,17 +51,25 @@ function escapeHtml(value: string): string {
         .replace(/'/g, '&#039;');
 }
 
-function encodePlantUml(text: string): string {
-    const deflated = pako.deflate(text, { level: 9 });
-    let binary = '';
-    for (const b of deflated) {
-        binary += String.fromCharCode(b);
+function extractFenceLanguage(info: string): string {
+    return info.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
+}
+
+function normalizeDiagramSource(source: string): string {
+    return source.replace(/\r\n/g, '\n').trim();
+}
+
+function normalizeKrokiType(language: string): string | undefined {
+    if (!language || !KROKI_LANGUAGES.has(language)) {
+        if (language === 'wabedrom') {
+            return 'wavedrom';
+        }
+        return undefined;
     }
-    return Buffer.from(binary, 'binary')
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/g, '');
+    if (language === 'uml') {
+        return UML_LANGUAGE;
+    }
+    return language;
 }
 
 function createMarkdownRenderer(): MarkdownIt {
@@ -39,19 +83,25 @@ function createMarkdownRenderer(): MarkdownIt {
     const fallbackFence = md.renderer.rules.fence;
     md.renderer.rules.fence = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
-        const info = (token.info ?? '').trim().toLowerCase();
+        const info = extractFenceLanguage(token.info ?? '');
 
         if (info === 'mermaid') {
             const source = token.content;
             return `<div class="mermaid">\n${escapeHtml(source)}\n</div>`;
         }
 
-        if (info === 'plantuml' || info === 'uml') {
-            const source = token.content.trim();
-            const svgBySource = (env as { umlSvgMap?: Record<string, string> }).umlSvgMap ?? {};
-            const svg = svgBySource[source];
+        if (info === 'tex' || info === 'latex') {
+            const source = normalizeDiagramSource(token.content);
+            return `<div class="math-block">\\[\n${escapeHtml(source)}\n\\]</div>`;
+        }
+
+        const krokiType = normalizeKrokiType(info);
+        if (krokiType && krokiType !== 'mermaid') {
+            const source = normalizeDiagramSource(token.content);
+            const svgBySource = (env as { krokiSvgMap?: Record<string, string> }).krokiSvgMap ?? {};
+            const svg = svgBySource[`${krokiType}::${source}`];
             if (svg) {
-                return `<div class="plantuml-svg">${svg}</div>`;
+                return `<div class="kroki-svg">${svg}</div>`;
             }
         }
 
@@ -64,39 +114,60 @@ function createMarkdownRenderer(): MarkdownIt {
     return md;
 }
 
-async function renderPlantUmlToSvg(umlSource: string): Promise<string | undefined> {
-    const encoded = encodePlantUml(umlSource);
-    const url = `https://kroki.io/plantuml/svg/${encoded}`;
+async function renderKrokiToSvg(krokiType: string, source: string): Promise<string | undefined> {
+    const url = `https://kroki.io/${krokiType}/svg`;
 
     try {
         const response = await fetch(url, {
+            method: 'POST',
             headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
                 Accept: 'image/svg+xml'
-            }
+            },
+            body: source
         });
         if (!response.ok) {
             return undefined;
         }
-        return await response.text();
+        const payload = await response.text();
+        if (!payload.includes('<svg')) {
+            return undefined;
+        }
+        return payload;
     } catch {
         return undefined;
     }
 }
 
-async function collectUmlSvgs(markdown: string): Promise<Record<string, string>> {
+async function collectKrokiSvgs(markdown: string, options: KrokiRenderOptions): Promise<Record<string, string>> {
     const result: Record<string, string> = {};
-    const umlRegex = /```(?:plantuml|uml)\s*\n([\s\S]*?)```/gi;
+    const fencedBlockRegex = /```([^\n`]*)\n([\s\S]*?)```/g;
 
-    const matches = Array.from(markdown.matchAll(umlRegex));
+    const matches = Array.from(markdown.matchAll(fencedBlockRegex));
     for (const match of matches) {
-        const source = (match[1] ?? '').trim();
-        if (!source || result[source]) {
+        const language = extractFenceLanguage(match[1] ?? '');
+        const krokiType = normalizeKrokiType(language);
+        if (!krokiType || krokiType === 'mermaid') {
             continue;
         }
 
-        const svg = await renderPlantUmlToSvg(source);
+        if (krokiType === UML_LANGUAGE && !options.includeUml) {
+            continue;
+        }
+
+        if (krokiType !== UML_LANGUAGE && !options.includeKroki) {
+            continue;
+        }
+
+        const source = normalizeDiagramSource(match[2] ?? '');
+        const key = `${krokiType}::${source}`;
+        if (!source || result[key]) {
+            continue;
+        }
+
+        const svg = await renderKrokiToSvg(krokiType, source);
         if (svg) {
-            result[source] = svg;
+            result[key] = svg;
         }
     }
 
@@ -117,6 +188,7 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
     </article>
     <script type="module">
       window.__MERMAID_RENDER_DONE__ = false;
+            window.__MATH_RENDER_DONE__ = false;
       try {
         const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
         mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
@@ -127,6 +199,34 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
       } finally {
         window.__MERMAID_RENDER_DONE__ = true;
       }
+
+            try {
+                const mathBlocks = Array.from(document.querySelectorAll('.math-block'));
+                if (mathBlocks.length > 0) {
+                    window.MathJax = {
+                        tex: {
+                            inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+                            displayMath: [['\\\\[', '\\\\]']]
+                        },
+                        svg: { fontCache: 'global' }
+                    };
+
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+                        script.async = true;
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error('MathJax load failed'));
+                        document.head.appendChild(script);
+                    });
+
+                    if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+                        await window.MathJax.typesetPromise();
+                    }
+                }
+            } finally {
+                window.__MATH_RENDER_DONE__ = true;
+            }
     </script>
   </body>
 </html>`;
@@ -160,14 +260,18 @@ async function exportActiveMarkdownToPdf(context: vscode.ExtensionContext): Prom
 
     const config = vscode.workspace.getConfiguration('documenticMarkdown');
     const includeUml = config.get<boolean>('includeUml', true);
+    const includeKroki = config.get<boolean>('includeKroki', true);
     const pdfFormat = config.get<'A4' | 'Letter'>('pdfFormat', 'A4');
 
     const cssPath = path.join(context.extensionPath, 'resources', 'github-markdown.css');
     const css = await fs.readFile(cssPath, 'utf8');
 
-    const umlSvgMap = includeUml ? await collectUmlSvgs(markdownText) : {};
+    const krokiSvgMap = await collectKrokiSvgs(markdownText, {
+        includeUml,
+        includeKroki
+    });
     const md = createMarkdownRenderer();
-    const htmlBody = md.render(markdownText, { umlSvgMap });
+    const htmlBody = md.render(markdownText, { krokiSvgMap });
     const html = buildHtmlDocument(htmlBody, css);
 
     const tempHtmlPath = path.join(os.tmpdir(), `documentic-markdown-${Date.now()}.html`);
@@ -181,7 +285,7 @@ async function exportActiveMarkdownToPdf(context: vscode.ExtensionContext): Prom
             waitUntil: 'networkidle0'
         });
 
-        await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true', {
+        await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
             timeout: 10000
         });
 
