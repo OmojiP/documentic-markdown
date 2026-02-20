@@ -1,0 +1,61 @@
+{
+    "name": "documentic-markdown-pdf",
+    "displayName": "Documentic Markdown PDF",
+    "description": "Export Markdown to PDF with Mermaid SVG and optional UML embedding.",
+    "version": "0.0.1",
+    "publisher": "local",
+    "engines": {
+        "vscode": "^1.96.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:documenticMarkdown.exportToPdf"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "documenticMarkdown.exportToPdf",
+                "title": "Documentic: Export Markdown to PDF"
+            }
+        ],
+        "configuration": {
+            "title": "Documentic Markdown PDF",
+            "properties": {
+                "documenticMarkdown.includeUml": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable PlantUML/UML fenced block conversion to SVG via Kroki."
+                },
+                "documenticMarkdown.pdfFormat": {
+                    "type": "string",
+                    "enum": [
+                        "A4",
+                        "Letter"
+                    ],
+                    "default": "A4",
+                    "description": "PDF page format."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "build": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package"
+    },
+    "devDependencies": {
+        "@types/markdown-it": "^14.1.2",
+        "@types/node": "^22.10.2",
+        "@types/pako": "^2.0.3",
+        "@types/vscode": "^1.96.0",
+        "typescript": "^5.7.2"
+    },
+    "dependencies": {
+        "markdown-it": "^14.1.0",
+        "pako": "^2.1.0",
+        "puppeteer": "^24.2.0"
+    }
+}
