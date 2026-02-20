@@ -56,6 +56,11 @@
                     ],
                     "default": "A4",
                     "description": "PDF page format."
+                },
+                "documenticMarkdown.openOutputAfterExport": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Open output after export (PDF/HTML with external browser, PNG with system default app)."
                 }
             }
         }

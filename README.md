@@ -14,8 +14,11 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 ## 使い方
 
 1. Markdownファイルを開く
-2. コマンドパレットで `Documentic: Export Markdown to PDF` を実行
-3. 保存先を選択
+2. コマンドパレットで `Documentic: Export Markdown` を実行
+3. 出力形式（PDF / HTML / PNG）を選択
+4. 保存先を選択
+
+補足: Markdownエディタ右上にも出力ボタンが表示されます。
 
 ## 開発手順
 
@@ -38,6 +41,7 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 - `documenticMarkdown.includeUml`: UML埋め込みを有効化（既定: true）
 - `documenticMarkdown.includeKroki`: UML以外のKroki形式埋め込みを有効化（既定: true）
 - `documenticMarkdown.pdfFormat`: `A4` or `Letter`
+- `documenticMarkdown.openOutputAfterExport`: 出力後に自動で開く（既定: true）
 
 ## 技術的な説明（簡潔版）
 
