@@ -11,16 +11,30 @@
         "Other"
     ],
     "activationEvents": [
+        "onCommand:documenticMarkdown.export",
         "onCommand:documenticMarkdown.exportToPdf"
     ],
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
             {
+                "command": "documenticMarkdown.export",
+                "title": "Documentic: Export Markdown"
+            },
+            {
                 "command": "documenticMarkdown.exportToPdf",
                 "title": "Documentic: Export Markdown to PDF"
             }
         ],
+        "menus": {
+            "editor/title": [
+                {
+                    "command": "documenticMarkdown.export",
+                    "when": "resourceLangId == markdown",
+                    "group": "navigation@100"
+                }
+            ]
+        },
         "configuration": {
             "title": "Documentic Markdown PDF",
             "properties": {

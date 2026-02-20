@@ -28,8 +28,18 @@ body {
 .markdown-body pre {
     padding: 16px;
     overflow: auto;
-    background-color: #f6f8fa;
+    color: #1f2328;
+    background-color: #eef2f7;
+    border: 1px solid #d0d7de;
     border-radius: 6px;
+}
+
+.markdown-body :not(pre)>code {
+    color: #1f2328;
+    background-color: #eef2f7;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 0.12em 0.3em;
 }
 
 .markdown-body table {

@@ -3,12 +3,14 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import MarkdownIt from 'markdown-it';
-import puppeteer, { type Browser } from 'puppeteer';
+import puppeteer, { type Browser, type Page } from 'puppeteer';
 
 type KrokiRenderOptions = {
     includeUml: boolean;
     includeKroki: boolean;
 };
+
+type ExportFormat = 'pdf' | 'html' | 'png';
 
 const UML_LANGUAGE = 'plantuml';
 const KROKI_LANGUAGES = new Set([
@@ -86,8 +88,7 @@ function createMarkdownRenderer(): MarkdownIt {
         const info = extractFenceLanguage(token.info ?? '');
 
         if (info === 'mermaid') {
-            const source = token.content;
-            return `<div class="mermaid">\n${escapeHtml(source)}\n</div>`;
+            return `<div class="mermaid">\n${escapeHtml(token.content)}\n</div>`;
         }
 
         if (info === 'tex' || info === 'latex') {
@@ -115,10 +116,8 @@ function createMarkdownRenderer(): MarkdownIt {
 }
 
 async function renderKrokiToSvg(krokiType: string, source: string): Promise<string | undefined> {
-    const url = `https://kroki.io/${krokiType}/svg`;
-
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`https://kroki.io/${krokiType}/svg`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain; charset=utf-8',
@@ -126,13 +125,16 @@ async function renderKrokiToSvg(krokiType: string, source: string): Promise<stri
             },
             body: source
         });
+
         if (!response.ok) {
             return undefined;
         }
+
         const payload = await response.text();
         if (!payload.includes('<svg')) {
             return undefined;
         }
+
         return payload;
     } catch {
         return undefined;
@@ -143,8 +145,7 @@ async function collectKrokiSvgs(markdown: string, options: KrokiRenderOptions): 
     const result: Record<string, string> = {};
     const fencedBlockRegex = /```([^\n`]*)\n([\s\S]*?)```/g;
 
-    const matches = Array.from(markdown.matchAll(fencedBlockRegex));
-    for (const match of matches) {
+    for (const match of markdown.matchAll(fencedBlockRegex)) {
         const language = extractFenceLanguage(match[1] ?? '');
         const krokiType = normalizeKrokiType(language);
         if (!krokiType || krokiType === 'mermaid') {
@@ -188,8 +189,9 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
     </article>
     <script type="module">
       window.__MERMAID_RENDER_DONE__ = false;
-            window.__MATH_RENDER_DONE__ = false;
-            window.__RENDER_ERRORS__ = [];
+      window.__MATH_RENDER_DONE__ = false;
+      window.__RENDER_ERRORS__ = [];
+
       try {
         const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
         mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
@@ -197,72 +199,134 @@ function buildHtmlDocument(markdownHtml: string, css: string): string {
         if (blocks.length > 0) {
           await mermaid.run({ nodes: blocks });
         }
-            } catch (error) {
-                                window.__RENDER_ERRORS__.push('Mermaid render failed: ' + (error?.message ?? String(error)));
+      } catch (error) {
+        window.__RENDER_ERRORS__.push('Mermaid render failed: ' + (error?.message ?? String(error)));
       } finally {
         window.__MERMAID_RENDER_DONE__ = true;
       }
 
-            try {
-                const mathBlocks = Array.from(document.querySelectorAll('.math-block'));
-                if (mathBlocks.length > 0) {
-                    window.MathJax = {
-                        tex: {
-                            inlineMath: [['$', '$'], ['\\(', '\\)']],
-                            displayMath: [['\\[', '\\]']]
-                        },
-                        svg: { fontCache: 'global' }
-                    };
+      try {
+        const mathBlocks = Array.from(document.querySelectorAll('.math-block'));
+        if (mathBlocks.length > 0) {
+          window.MathJax = {
+            tex: {
+              inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+              displayMath: [['\\\\[', '\\\\]']]
+            },
+            svg: { fontCache: 'global' }
+          };
 
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
-                        script.async = true;
-                        script.onload = resolve;
-                        script.onerror = () => reject(new Error('MathJax load failed'));
-                        document.head.appendChild(script);
-                    });
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('MathJax load failed'));
+            document.head.appendChild(script);
+          });
 
-                    if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
-                        await window.MathJax.typesetPromise();
-                    }
-                }
-            } catch (error) {
-                                window.__RENDER_ERRORS__.push('Math render failed: ' + (error?.message ?? String(error)));
-            } finally {
-                window.__MATH_RENDER_DONE__ = true;
-            }
+          if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+            await window.MathJax.typesetPromise();
+          }
+        }
+      } catch (error) {
+        window.__RENDER_ERRORS__.push('Math render failed: ' + (error?.message ?? String(error)));
+      } finally {
+        window.__MATH_RENDER_DONE__ = true;
+      }
     </script>
   </body>
 </html>`;
 }
 
-async function exportActiveMarkdownToPdf(context: vscode.ExtensionContext): Promise<void> {
+function getDefaultOutputUri(inputUri: vscode.Uri, format: ExportFormat): vscode.Uri {
+    const ext = `.${format}`;
+    const outputPath = inputUri.path.replace(/\.(md|markdown)$/i, ext);
+    if (outputPath !== inputUri.path) {
+        return inputUri.with({ path: outputPath });
+    }
+    return inputUri.with({ path: `${inputUri.path}${ext}` });
+}
+
+async function chooseExportFormat(forced?: ExportFormat): Promise<ExportFormat | undefined> {
+    if (forced) {
+        return forced;
+    }
+
+    const picked = await vscode.window.showQuickPick(
+        [
+            { label: 'PDF', value: 'pdf' as const },
+            { label: 'HTML', value: 'html' as const },
+            { label: 'PNG', value: 'png' as const }
+        ],
+        {
+            title: '出力形式を選択',
+            placeHolder: 'PDF / HTML / PNG'
+        }
+    );
+
+    return picked?.value;
+}
+
+async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): Promise<vscode.Uri | undefined> {
+    const titleMap: Record<ExportFormat, string> = {
+        pdf: 'PDFの保存先を選択',
+        html: 'HTMLの保存先を選択',
+        png: 'PNGの保存先を選択'
+    };
+
+    const filterMap: Record<ExportFormat, Record<string, string[]>> = {
+        pdf: { PDF: ['pdf'] },
+        html: { HTML: ['html'] },
+        png: { PNG: ['png'] }
+    };
+
+    return vscode.window.showSaveDialog({
+        title: titleMap[format],
+        defaultUri: getDefaultOutputUri(currentFile, format),
+        filters: filterMap[format]
+    });
+}
+
+async function openRenderedPage(tempHtmlPath: string): Promise<{ browser: Browser; page: Page; renderErrors: string[] }> {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    await page.goto(`file:///${tempHtmlPath.replace(/\\/g, '/')}`, {
+        waitUntil: 'networkidle0'
+    });
+
+    await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
+        timeout: 15000
+    });
+
+    const renderErrors = await page.evaluate(() => {
+        const errors = (window as Window & { __RENDER_ERRORS__?: unknown }).__RENDER_ERRORS__;
+        return Array.isArray(errors) ? errors.map((item) => String(item)) : [];
+    });
+
+    return { browser, page, renderErrors };
+}
+
+async function exportActiveMarkdown(context: vscode.ExtensionContext, forcedFormat?: ExportFormat): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'markdown') {
         vscode.window.showErrorMessage('Markdownファイルを開いてから実行してください。');
         return;
     }
 
-    const markdownText = editor.document.getText();
+    const format = await chooseExportFormat(forcedFormat);
+    if (!format) {
+        return;
+    }
+
     const currentFile = editor.document.uri;
-
-    const defaultPdf = currentFile.with({
-        path: currentFile.path.replace(/\.md$/i, '.pdf')
-    });
-
-    const targetUri = await vscode.window.showSaveDialog({
-        title: 'PDFの保存先を選択',
-        defaultUri: defaultPdf,
-        filters: {
-            PDF: ['pdf']
-        }
-    });
-
+    const targetUri = await chooseOutputPath(currentFile, format);
     if (!targetUri) {
         return;
     }
 
+    const markdownText = editor.document.getText();
     const config = vscode.workspace.getConfiguration('documenticMarkdown');
     const includeUml = config.get<boolean>('includeUml', true);
     const includeKroki = config.get<boolean>('includeKroki', true);
@@ -271,45 +335,53 @@ async function exportActiveMarkdownToPdf(context: vscode.ExtensionContext): Prom
     const cssPath = path.join(context.extensionPath, 'resources', 'github-markdown.css');
     const css = await fs.readFile(cssPath, 'utf8');
 
-    const krokiSvgMap = await collectKrokiSvgs(markdownText, {
-        includeUml,
-        includeKroki
-    });
+    const krokiSvgMap = await collectKrokiSvgs(markdownText, { includeUml, includeKroki });
     const md = createMarkdownRenderer();
     const htmlBody = md.render(markdownText, { krokiSvgMap });
     const html = buildHtmlDocument(htmlBody, css);
+
+    if (format === 'html') {
+        await fs.writeFile(targetUri.fsPath, html, 'utf8');
+        vscode.window.showInformationMessage(`HTMLを出力しました: ${targetUri.fsPath}`);
+        return;
+    }
 
     const tempHtmlPath = path.join(os.tmpdir(), `documentic-markdown-${Date.now()}.html`);
     await fs.writeFile(tempHtmlPath, html, 'utf8');
 
     let browser: Browser | undefined;
     try {
-        browser = await puppeteer.launch({ headless: true });
-        const page = await browser.newPage();
-        await page.goto(`file:///${tempHtmlPath.replace(/\\/g, '/')}`, {
-            waitUntil: 'networkidle0'
-        });
+        const opened = await openRenderedPage(tempHtmlPath);
+        browser = opened.browser;
 
-        await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
-            timeout: 10000
-        });
+        if (format === 'pdf') {
+            await opened.page.pdf({
+                path: targetUri.fsPath,
+                format: pdfFormat,
+                printBackground: true,
+                margin: {
+                    top: '16mm',
+                    right: '16mm',
+                    bottom: '16mm',
+                    left: '16mm'
+                }
+            });
+            vscode.window.showInformationMessage(`PDFを出力しました: ${targetUri.fsPath}`);
+        } else {
+            await opened.page.screenshot({
+                path: targetUri.fsPath,
+                fullPage: true,
+                type: 'png'
+            });
+            vscode.window.showInformationMessage(`PNGを出力しました: ${targetUri.fsPath}`);
+        }
 
-        await page.pdf({
-            path: targetUri.fsPath,
-            format: pdfFormat,
-            printBackground: true,
-            margin: {
-                top: '16mm',
-                right: '16mm',
-                bottom: '16mm',
-                left: '16mm'
-            }
-        });
-
-        vscode.window.showInformationMessage(`PDFを出力しました: ${targetUri.fsPath}`);
+        if (opened.renderErrors.length > 0) {
+            vscode.window.showWarningMessage(`一部の図/数式の描画に失敗しました: ${opened.renderErrors.join(' | ')}`);
+        }
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`PDF出力に失敗しました: ${message}`);
+        vscode.window.showErrorMessage(`出力に失敗しました: ${message}`);
     } finally {
         try {
             await browser?.close();
@@ -323,10 +395,15 @@ async function exportActiveMarkdownToPdf(context: vscode.ExtensionContext): Prom
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-    const command = vscode.commands.registerCommand('documenticMarkdown.exportToPdf', async () => {
-        await exportActiveMarkdownToPdf(context);
+    const exportCommand = vscode.commands.registerCommand('documenticMarkdown.export', async () => {
+        await exportActiveMarkdown(context);
     });
-    context.subscriptions.push(command);
+
+    const legacyPdfCommand = vscode.commands.registerCommand('documenticMarkdown.exportToPdf', async () => {
+        await exportActiveMarkdown(context, 'pdf');
+    });
+
+    context.subscriptions.push(exportCommand, legacyPdfCommand);
 }
 
 export function deactivate(): void {
