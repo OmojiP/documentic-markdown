@@ -1,4 +1,4 @@
-# Markdown PDF Test
+# Markdown Test
 
 # 1. 見出し
 
@@ -86,7 +86,7 @@ $$F = ma$$
 
 ## 8. 画像
 
-![sample image](https://dummyimage.com/600x120/eeeeee/333333&text=Markdown+PDF+Test)
+![sample image](https://dummyimage.com/600x120/eeeeee/333333&text=Markdown+Test)
 
 ## 9. 区切り線
 
