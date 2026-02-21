@@ -10,6 +10,117 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const FIXTURES_DIR = path.join(ROOT_DIR, 'test-fixtures');
 const OUTPUT_ROOT = path.join(FIXTURES_DIR, '.exports');
 const RENDER_TIMEOUT_MS = 30000;
+const QUALITY_PRESETS = {
+    low: 1,
+    medium: 2,
+    high: 3
+};
+const NETWORK_PROFILES = [
+    { name: 'online', allowExternalHttp: true },
+    { name: 'offline', allowExternalHttp: false }
+];
+
+function printUsage() {
+    console.log('Usage: npm run fixtures:export -- [--network online|offline|online,offline] [--quality low|medium|high|low,high] [--clean]');
+    console.log('');
+    console.log('Examples:');
+    console.log('  npm run fixtures:export -- --network offline --quality high');
+    console.log('  npm run fixtures:export -- --network online --quality low,medium');
+    console.log('  npm run fixtures:export -- --network offline --quality high --clean');
+}
+
+function parseCsvArg(value) {
+    return String(value)
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.length > 0);
+}
+
+function parseCliOptions(argv) {
+    const options = {
+        networks: undefined,
+        qualities: undefined,
+        clean: false,
+        help: false
+    };
+
+    for (let index = 0; index < argv.length; index += 1) {
+        const token = argv[index];
+        if (token === '--help' || token === '-h') {
+            options.help = true;
+            continue;
+        }
+
+        if (token === '--clean') {
+            options.clean = true;
+            continue;
+        }
+
+        if (token === '--network' || token === '-n') {
+            const value = argv[index + 1];
+            if (!value || value.startsWith('-')) {
+                throw new Error('`--network` の値が指定されていません。');
+            }
+            options.networks = parseCsvArg(value);
+            index += 1;
+            continue;
+        }
+
+        if (token === '--quality' || token === '-q') {
+            const value = argv[index + 1];
+            if (!value || value.startsWith('-')) {
+                throw new Error('`--quality` の値が指定されていません。');
+            }
+            options.qualities = parseCsvArg(value);
+            index += 1;
+            continue;
+        }
+
+        throw new Error(`未対応の引数です: ${token}`);
+    }
+
+    const validNetworks = new Set(NETWORK_PROFILES.map((profile) => profile.name));
+    const validQualities = new Set(Object.keys(QUALITY_PRESETS));
+
+    if (options.networks) {
+        const invalid = options.networks.filter((name) => !validNetworks.has(name));
+        if (invalid.length > 0) {
+            throw new Error(`無効な --network 値です: ${invalid.join(', ')}`);
+        }
+        options.networks = Array.from(new Set(options.networks));
+    }
+
+    if (options.qualities) {
+        const invalid = options.qualities.filter((name) => !validQualities.has(name));
+        if (invalid.length > 0) {
+            throw new Error(`無効な --quality 値です: ${invalid.join(', ')}`);
+        }
+        options.qualities = Array.from(new Set(options.qualities));
+    }
+
+    return options;
+}
+
+function buildScenarios(options) {
+    const selectedNetworks = options.networks
+        ? NETWORK_PROFILES.filter((profile) => options.networks.includes(profile.name))
+        : NETWORK_PROFILES;
+
+    const selectedQualities = options.qualities
+        ? Object.entries(QUALITY_PRESETS).filter(([qualityName]) => options.qualities.includes(qualityName))
+        : Object.entries(QUALITY_PRESETS);
+
+    return selectedNetworks.flatMap((networkProfile) => {
+        return selectedQualities.map(([qualityName, scale]) => {
+            return {
+                name: `${networkProfile.name}-${qualityName}`,
+                allowExternalHttp: networkProfile.allowExternalHttp,
+                qualityName,
+                deviceScaleFactor: scale
+            };
+        });
+    });
+}
 
 function normalizeDisplayMathBlocks(markdown) {
     const lines = markdown.split(/\r?\n/);
@@ -236,6 +347,12 @@ async function exportDiagramBlocksAsSvg(page, outputDir) {
 }
 
 async function run() {
+    const options = parseCliOptions(process.argv.slice(2));
+    if (options.help) {
+        printUsage();
+        return;
+    }
+
     const renderingEntry = path.join(ROOT_DIR, 'dist', 'rendering.js');
     try {
         await fs.access(renderingEntry);
@@ -258,8 +375,24 @@ async function run() {
         return;
     }
 
+    const scenarios = buildScenarios(options);
+    if (scenarios.length === 0) {
+        throw new Error('実行対象のシナリオがありません。--network / --quality を確認してください。');
+    }
+
     await fs.mkdir(OUTPUT_ROOT, { recursive: true });
+
+    if (options.clean) {
+        for (const scenario of scenarios) {
+            await fs.rm(path.join(OUTPUT_ROOT, scenario.name), { recursive: true, force: true });
+        }
+    }
+
     console.log(`Found ${mdFiles.length} fixture files.`);
+    console.log(`Scenarios: ${scenarios.map((scenario) => scenario.name).join(', ')}`);
+    if (options.clean) {
+        console.log('Clean mode: target scenario output directories were removed before export.');
+    }
 
     const browser = await puppeteer.launch({ headless: true });
     const failures = [];
@@ -269,62 +402,66 @@ async function run() {
             const relativeMdPath = path.relative(FIXTURES_DIR, markdownPath);
             const relativeDir = path.dirname(relativeMdPath);
             const stem = path.parse(markdownPath).name;
+            const markdownText = await fs.readFile(markdownPath, 'utf8');
+            const normalized = normalizeDisplayMathBlocks(markdownText);
 
-            const outputDir = path.join(OUTPUT_ROOT, relativeDir, stem);
-            const diagramSvgDir = path.join(outputDir, 'diagram-svgs');
-            const diagramPngDir = path.join(outputDir, 'diagram-pngs');
-            const htmlPath = path.join(outputDir, `${stem}.html`);
-            const pdfPath = path.join(outputDir, `${stem}.pdf`);
-            const pngPath = path.join(outputDir, `${stem}.png`);
+            for (const scenario of scenarios) {
+                const outputDir = path.join(OUTPUT_ROOT, scenario.name, relativeDir, stem);
+                const diagramSvgDir = path.join(outputDir, 'diagram-svgs');
+                const diagramPngDir = path.join(outputDir, 'diagram-pngs');
+                const htmlPath = path.join(outputDir, `${stem}.html`);
+                const pdfPath = path.join(outputDir, `${stem}.pdf`);
+                const pngPath = path.join(outputDir, `${stem}.png`);
 
-            await fs.mkdir(outputDir, { recursive: true });
+                await fs.mkdir(outputDir, { recursive: true });
 
-            let page;
-            try {
-                const markdownText = await fs.readFile(markdownPath, 'utf8');
-                const normalized = normalizeDisplayMathBlocks(markdownText);
-                const krokiSvgMap = await collectKrokiSvgs(normalized, {
-                    includeKroki: true,
-                    allowExternalHttp: true
-                });
+                let page;
+                try {
+                    const krokiSvgMap = await collectKrokiSvgs(normalized, {
+                        includeKroki: true,
+                        allowExternalHttp: scenario.allowExternalHttp
+                    });
 
-                const md = createMarkdownRenderer(false);
-                const htmlBody = md.render(normalized, { krokiSvgMap });
-                const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript });
+                    const md = createMarkdownRenderer(false);
+                    const htmlBody = md.render(normalized, { krokiSvgMap });
+                    const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript });
 
-                await fs.writeFile(htmlPath, html, 'utf8');
+                    await fs.writeFile(htmlPath, html, 'utf8');
 
-                page = await browser.newPage();
-                await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 2 });
-                await page.setContent(html, { waitUntil: 'networkidle0' });
-                await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
-                    timeout: RENDER_TIMEOUT_MS
-                });
+                    page = await browser.newPage();
+                    await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: scenario.deviceScaleFactor });
+                    await page.setContent(html, { waitUntil: 'networkidle0' });
+                    await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
+                        timeout: RENDER_TIMEOUT_MS
+                    });
 
-                const renderErrors = await page.evaluate(() => {
-                    const errors = window.__RENDER_ERRORS__;
-                    return Array.isArray(errors) ? errors.map((item) => String(item)) : [];
-                });
+                    const renderErrors = await page.evaluate(() => {
+                        const errors = window.__RENDER_ERRORS__;
+                        return Array.isArray(errors) ? errors.map((item) => String(item)) : [];
+                    });
 
-                await page.pdf({
-                    path: pdfPath,
-                    format: 'A4',
-                    printBackground: true,
-                    margin: { top: '16mm', right: '16mm', bottom: '16mm', left: '16mm' }
-                });
-                await exportWholePageAsPng(page, pngPath);
-                const svgCount = await exportDiagramBlocksAsSvg(page, diagramSvgDir);
-                const pngCount = await exportDiagramBlocksAsPng(page, diagramPngDir);
+                    await page.pdf({
+                        path: pdfPath,
+                        format: 'A4',
+                        printBackground: true,
+                        margin: { top: '16mm', right: '16mm', bottom: '16mm', left: '16mm' }
+                    });
+                    await exportWholePageAsPng(page, pngPath);
+                    const svgCount = await exportDiagramBlocksAsSvg(page, diagramSvgDir);
+                    const pngCount = await exportDiagramBlocksAsPng(page, diagramPngDir);
 
-                const warningText = renderErrors.length > 0 ? ` warnings=${renderErrors.length}` : '';
-                console.log(`OK   ${relativeMdPath} -> PDF/HTML/PNG + SVG(${svgCount}) PNG(${pngCount})${warningText}`);
-            } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                failures.push({ markdownPath: relativeMdPath, message });
-                console.error(`FAIL ${relativeMdPath} -> ${message}`);
-            } finally {
-                if (page) {
-                    await page.close();
+                    const warningText = renderErrors.length > 0 ? ` warnings=${renderErrors.length}` : '';
+                    console.log(
+                        `OK   [${scenario.name}] ${relativeMdPath} -> PDF/HTML/PNG + SVG(${svgCount}) PNG(${pngCount})${warningText}`
+                    );
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    failures.push({ markdownPath: `[${scenario.name}] ${relativeMdPath}`, message });
+                    console.error(`FAIL [${scenario.name}] ${relativeMdPath} -> ${message}`);
+                } finally {
+                    if (page) {
+                        await page.close();
+                    }
                 }
             }
         }

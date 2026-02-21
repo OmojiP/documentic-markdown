@@ -45,7 +45,23 @@ Generated artifacts:
 - Per-code-block SVG
 - Per-code-block PNG
 
-Output directory: `test-fixtures/.exports`.
+All combinations of `online/offline` and `low/medium/high` (PNG quality) are executed in a single run.
+
+Output directory: `test-fixtures/.exports` (e.g. `test-fixtures/.exports/online-high/...`).
+
+You can also filter scenarios with arguments:
+
+```bash
+npm run fixtures:export -- --network offline --quality high
+```
+
+```bash
+npm run fixtures:export -- --network offline --quality high --clean
+```
+
+- `--network`: `online`, `offline`, or comma-separated values (e.g. `online,offline`)
+- `--quality`: `low`, `medium`, `high`, or comma-separated values (e.g. `low,high`)
+- `--clean`: remove target scenario output directories before export
 
 ## Notes
 

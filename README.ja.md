@@ -45,7 +45,23 @@ npm run fixtures:export
 - コードブロックごとの SVG
 - コードブロックごとの PNG
 
-出力先は `test-fixtures/.exports` です。
+`online/offline` と `low/medium/high`（PNG品質）の全組み合わせを一度に実行します。
+
+出力先は `test-fixtures/.exports`（例: `test-fixtures/.exports/online-high/...`）です。
+
+引数で絞り込みもできます:
+
+```bash
+npm run fixtures:export -- --network offline --quality high
+```
+
+```bash
+npm run fixtures:export -- --network offline --quality high --clean
+```
+
+- `--network`: `online`, `offline`, またはカンマ区切り（例: `online,offline`）
+- `--quality`: `low`, `medium`, `high`, またはカンマ区切り（例: `low,high`）
+- `--clean`: 実行前に対象シナリオの出力ディレクトリを削除してから再生成
 
 ## 補足
 
