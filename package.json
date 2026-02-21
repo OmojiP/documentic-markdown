@@ -4,6 +4,7 @@
     "description": "Export Markdown to PDF with Mermaid and Kroki-based diagram embedding.",
     "version": "0.0.1",
     "publisher": "local",
+    "license": "MIT",
     "engines": {
         "vscode": "^1.96.0"
     },
