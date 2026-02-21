@@ -3,7 +3,7 @@
     "displayName": "Documentic Markdown",
     "description": "Export Markdown to Document(PDF, HTML, PNG) with Mermaid and Kroki-based diagram embedding.",
     "version": "0.1.2",
-    "publisher": "ecbf7f07-1c26-6919-a834-fd9d001922fc",
+    "publisher": "OmojiP",
     "license": "MIT",
     "engines": {
         "vscode": "^1.96.0"
@@ -15,6 +15,7 @@
     "categories": [
         "Other"
     ],
+    "icon": "resources/icons/extension-icon.png",
     "activationEvents": [
         "onCommand:documenticMarkdown.export",
         "onCommand:documenticMarkdown.exportDiagramBlocksPng",
