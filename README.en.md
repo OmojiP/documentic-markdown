@@ -29,6 +29,24 @@ Note: An export button is also available on the top-right of the Markdown editor
 3. Run `npm run build`
 4. Press `F5` in VS Code to launch Extension Development Host
 
+## Test fixture export
+
+You can generate test artifacts from all Markdown files under `test-fixtures`:
+
+```bash
+npm run fixtures:export
+```
+
+Generated artifacts:
+
+- PDF
+- HTML
+- PNG
+- Per-code-block SVG
+- Per-code-block PNG
+
+Output directory: `test-fixtures/.exports`.
+
 ## Notes
 
 - Mermaid is rendered and embedded as SVG during export

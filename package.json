@@ -101,7 +101,8 @@
     "scripts": {
         "build": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "package": "vsce package"
+        "package": "vsce package",
+        "fixtures:export": "node scripts/export-test-fixtures.cjs"
     },
     "devDependencies": {
         "@types/markdown-it": "^14.1.2",

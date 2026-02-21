@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.vsix
 *.pdf
+.exports/
+**/.exports/

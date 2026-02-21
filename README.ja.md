@@ -29,6 +29,24 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 3. `npm run build`
 4. VS Code で `F5` を押して Extension Development Host を起動
 
+## テストフィクスチャ出力
+
+`test-fixtures` 配下のすべての Markdown から、テスト用成果物を一括生成できます。
+
+```bash
+npm run fixtures:export
+```
+
+生成されるもの:
+
+- PDF
+- HTML
+- PNG
+- コードブロックごとの SVG
+- コードブロックごとの PNG
+
+出力先は `test-fixtures/.exports` です。
+
 ## 補足
 
 - Mermaid は PDF 生成時に SVG へ変換して埋め込みます

@@ -1,0 +1,351 @@
+#!/usr/bin/env node
+
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const { PNG } = require('pngjs');
+const puppeteer = require('puppeteer');
+const { createMarkdownRenderer, collectKrokiSvgs, buildHtmlDocument } = require('../dist/rendering');
+
+const ROOT_DIR = path.resolve(__dirname, '..');
+const FIXTURES_DIR = path.join(ROOT_DIR, 'test-fixtures');
+const OUTPUT_ROOT = path.join(FIXTURES_DIR, '.exports');
+const RENDER_TIMEOUT_MS = 30000;
+
+function normalizeDisplayMathBlocks(markdown) {
+    const lines = markdown.split(/\r?\n/);
+    const output = [];
+
+    let inCodeFence = false;
+    let inMathBlock = false;
+    let mathLines = [];
+
+    for (const line of lines) {
+        if (!inMathBlock && /^```/.test(line.trim())) {
+            inCodeFence = !inCodeFence;
+            output.push(line);
+            continue;
+        }
+
+        if (inCodeFence) {
+            output.push(line);
+            continue;
+        }
+
+        const trimmed = line.trim();
+
+        if (!inMathBlock) {
+            const oneLine = trimmed.match(/^\$\$(.+)\$\$$/);
+            if (oneLine) {
+                output.push('```tex');
+                output.push(oneLine[1].trim());
+                output.push('```');
+                continue;
+            }
+
+            if (trimmed === '$$') {
+                inMathBlock = true;
+                mathLines = [];
+                continue;
+            }
+
+            output.push(line);
+            continue;
+        }
+
+        if (trimmed === '$$') {
+            output.push('```tex');
+            output.push(mathLines.join('\n'));
+            output.push('```');
+            inMathBlock = false;
+            mathLines = [];
+            continue;
+        }
+
+        mathLines.push(line);
+    }
+
+    if (inMathBlock) {
+        output.push('$$');
+        output.push(...mathLines);
+    }
+
+    return output.join('\n');
+}
+
+async function collectMarkdownFiles(dirPath) {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const files = [];
+
+    for (const entry of entries) {
+        if (entry.name === '.exports') {
+            continue;
+        }
+
+        const fullPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+            files.push(...(await collectMarkdownFiles(fullPath)));
+            continue;
+        }
+
+        if (/\.md$/i.test(entry.name)) {
+            files.push(fullPath);
+        }
+    }
+
+    return files;
+}
+
+async function exportWholePageAsPng(page, outputPath) {
+    const layout = await page.evaluate(() => {
+        const root = document.documentElement;
+        const body = document.body;
+        const width = Math.max(root.scrollWidth, root.clientWidth, body?.scrollWidth ?? 0);
+        const height = Math.max(root.scrollHeight, root.clientHeight, body?.scrollHeight ?? 0);
+        return {
+            width: Math.ceil(width),
+            height: Math.ceil(height)
+        };
+    });
+
+    const currentViewport = page.viewport() ?? { width: 1280, height: 720, deviceScaleFactor: 2 };
+    const targetWidth = Math.max(currentViewport.width, layout.width);
+    const segmentHeight = Math.min(2000, Math.max(800, currentViewport.height));
+    const requestedScale = currentViewport.deviceScaleFactor || 1;
+    const maxSafeDimension = 32000;
+    const maxScaleByWidth = Math.max(1, Math.floor(maxSafeDimension / Math.max(1, layout.width)));
+    const maxScaleByHeight = Math.max(1, Math.floor(maxSafeDimension / Math.max(1, layout.height)));
+    const deviceScaleFactor = Math.max(1, Math.min(requestedScale, maxScaleByWidth, maxScaleByHeight));
+
+    await page.setViewport({
+        width: targetWidth,
+        height: segmentHeight,
+        deviceScaleFactor
+    });
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    const captures = [];
+    let previousY = -1;
+    let nextY = 0;
+
+    for (let guard = 0; guard < 2000; guard += 1) {
+        await page.evaluate((scrollY) => {
+            window.scrollTo(0, scrollY);
+        }, nextY);
+        await new Promise((resolve) => setTimeout(resolve, 40));
+
+        const actualY = await page.evaluate(() => Math.round(window.scrollY));
+        if (actualY === previousY) {
+            break;
+        }
+
+        const chunk = await page.screenshot({ type: 'png' });
+        const chunkBuffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        captures.push({ y: actualY, image: PNG.sync.read(chunkBuffer) });
+
+        previousY = actualY;
+        if (actualY + segmentHeight >= layout.height - 1) {
+            break;
+        }
+        nextY = actualY + segmentHeight;
+    }
+
+    if (captures.length === 0) {
+        throw new Error('Failed to capture PNG segments.');
+    }
+
+    const stitchedWidth = Math.max(...captures.map((item) => item.image.width));
+    const stitchedHeight = Math.max(1, Math.round(layout.height * deviceScaleFactor));
+    const stitched = new PNG({ width: stitchedWidth, height: stitchedHeight });
+
+    for (const capture of captures) {
+        const offsetY = Math.round(capture.y * deviceScaleFactor);
+        const writableHeight = Math.max(0, Math.min(capture.image.height, stitched.height - offsetY));
+        if (writableHeight <= 0) {
+            continue;
+        }
+
+        PNG.bitblt(capture.image, stitched, 0, 0, capture.image.width, writableHeight, 0, offsetY);
+    }
+
+    await fs.writeFile(outputPath, PNG.sync.write(stitched));
+}
+
+async function exportDiagramBlocksAsPng(page, outputDir) {
+    await fs.mkdir(outputDir, { recursive: true });
+
+    const handles = await page.$$('.mermaid svg, .kroki-svg svg, .math-block svg');
+    let count = 0;
+
+    for (let index = 0; index < handles.length; index += 1) {
+        const handle = handles[index];
+        const filePath = path.join(outputDir, `diagram-${String(index + 1).padStart(3, '0')}.png`);
+        try {
+            await handle.screenshot({ path: filePath, type: 'png' });
+            count += 1;
+        } finally {
+            await handle.dispose();
+        }
+    }
+
+    return count;
+}
+
+async function exportDiagramBlocksAsSvg(page, outputDir) {
+    await fs.mkdir(outputDir, { recursive: true });
+
+    const svgSources = await page.evaluate(() => {
+        const svgNs = 'http://www.w3.org/2000/svg';
+        const globalCache = document.querySelector('#MJX-SVG-global-cache');
+        const globalDefs = globalCache?.querySelector('defs')?.innerHTML ?? '';
+        const targets = document.querySelectorAll('.mermaid svg, .kroki-svg svg, .math-block svg');
+
+        return Array.from(targets).map((svg) => {
+            const cloned = svg.cloneNode(true);
+            const isMathSvg = Boolean(svg.closest('.math-block'));
+
+            if (!cloned.getAttribute('xmlns')) {
+                cloned.setAttribute('xmlns', svgNs);
+            }
+            if (!cloned.getAttribute('xmlns:xlink')) {
+                cloned.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            }
+
+            if (isMathSvg && globalDefs) {
+                const hasMathRef = /(?:xlink:href|href)="#MJX-/.test(cloned.outerHTML);
+                if (hasMathRef) {
+                    let defs = cloned.querySelector('defs');
+                    if (!defs) {
+                        defs = document.createElementNS(svgNs, 'defs');
+                        cloned.insertBefore(defs, cloned.firstChild);
+                    }
+                    defs.insertAdjacentHTML('beforeend', globalDefs);
+                }
+            }
+
+            return cloned.outerHTML;
+        });
+    });
+
+    for (let index = 0; index < svgSources.length; index += 1) {
+        const filePath = path.join(outputDir, `diagram-${String(index + 1).padStart(3, '0')}.svg`);
+        await fs.writeFile(filePath, svgSources[index], 'utf8');
+    }
+
+    return svgSources.length;
+}
+
+async function run() {
+    const renderingEntry = path.join(ROOT_DIR, 'dist', 'rendering.js');
+    try {
+        await fs.access(renderingEntry);
+    } catch {
+        throw new Error('dist/rendering.js が見つかりません。先に `npm run build` を実行してください。');
+    }
+
+    const cssPath = path.join(ROOT_DIR, 'resources', 'github-markdown.css');
+    const mermaidScriptPath = path.join(ROOT_DIR, 'node_modules', 'mermaid', 'dist', 'mermaid.min.js');
+    const mathJaxScriptPath = path.join(ROOT_DIR, 'node_modules', 'mathjax-full', 'es5', 'tex-svg.js');
+    const [css, mermaidScript, mathJaxScript] = await Promise.all([
+        fs.readFile(cssPath, 'utf8'),
+        fs.readFile(mermaidScriptPath, 'utf8'),
+        fs.readFile(mathJaxScriptPath, 'utf8')
+    ]);
+
+    const mdFiles = await collectMarkdownFiles(FIXTURES_DIR);
+    if (mdFiles.length === 0) {
+        console.log('No markdown fixtures found.');
+        return;
+    }
+
+    await fs.mkdir(OUTPUT_ROOT, { recursive: true });
+    console.log(`Found ${mdFiles.length} fixture files.`);
+
+    const browser = await puppeteer.launch({ headless: true });
+    const failures = [];
+
+    try {
+        for (const markdownPath of mdFiles) {
+            const relativeMdPath = path.relative(FIXTURES_DIR, markdownPath);
+            const relativeDir = path.dirname(relativeMdPath);
+            const stem = path.parse(markdownPath).name;
+
+            const outputDir = path.join(OUTPUT_ROOT, relativeDir, stem);
+            const diagramSvgDir = path.join(outputDir, 'diagram-svgs');
+            const diagramPngDir = path.join(outputDir, 'diagram-pngs');
+            const htmlPath = path.join(outputDir, `${stem}.html`);
+            const pdfPath = path.join(outputDir, `${stem}.pdf`);
+            const pngPath = path.join(outputDir, `${stem}.png`);
+
+            await fs.mkdir(outputDir, { recursive: true });
+
+            let page;
+            try {
+                const markdownText = await fs.readFile(markdownPath, 'utf8');
+                const normalized = normalizeDisplayMathBlocks(markdownText);
+                const krokiSvgMap = await collectKrokiSvgs(normalized, {
+                    includeKroki: true,
+                    allowExternalHttp: true
+                });
+
+                const md = createMarkdownRenderer(false);
+                const htmlBody = md.render(normalized, { krokiSvgMap });
+                const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript });
+
+                await fs.writeFile(htmlPath, html, 'utf8');
+
+                page = await browser.newPage();
+                await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 2 });
+                await page.setContent(html, { waitUntil: 'networkidle0' });
+                await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
+                    timeout: RENDER_TIMEOUT_MS
+                });
+
+                const renderErrors = await page.evaluate(() => {
+                    const errors = window.__RENDER_ERRORS__;
+                    return Array.isArray(errors) ? errors.map((item) => String(item)) : [];
+                });
+
+                await page.pdf({
+                    path: pdfPath,
+                    format: 'A4',
+                    printBackground: true,
+                    margin: { top: '16mm', right: '16mm', bottom: '16mm', left: '16mm' }
+                });
+                await exportWholePageAsPng(page, pngPath);
+                const svgCount = await exportDiagramBlocksAsSvg(page, diagramSvgDir);
+                const pngCount = await exportDiagramBlocksAsPng(page, diagramPngDir);
+
+                const warningText = renderErrors.length > 0 ? ` warnings=${renderErrors.length}` : '';
+                console.log(`OK   ${relativeMdPath} -> PDF/HTML/PNG + SVG(${svgCount}) PNG(${pngCount})${warningText}`);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                failures.push({ markdownPath: relativeMdPath, message });
+                console.error(`FAIL ${relativeMdPath} -> ${message}`);
+            } finally {
+                if (page) {
+                    await page.close();
+                }
+            }
+        }
+    } finally {
+        await browser.close();
+    }
+
+    if (failures.length > 0) {
+        console.error('\nFixture export finished with failures:');
+        for (const failure of failures) {
+            console.error(`- ${failure.markdownPath}: ${failure.message}`);
+        }
+        process.exitCode = 1;
+        return;
+    }
+
+    console.log(`\nFixture export completed. Output root: ${path.relative(ROOT_DIR, OUTPUT_ROOT)}`);
+}
+
+run().catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    process.exitCode = 1;
+});
