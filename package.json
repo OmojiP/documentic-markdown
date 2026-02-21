@@ -12,6 +12,7 @@
     ],
     "activationEvents": [
         "onCommand:documenticMarkdown.export",
+        "onCommand:documenticMarkdown.exportDiagramBlocksPng",
         "onCommand:documenticMarkdown.exportToPdf"
     ],
     "main": "./dist/extension.js",
@@ -19,7 +20,15 @@
         "commands": [
             {
                 "command": "documenticMarkdown.export",
-                "title": "Documentic: Export Markdown"
+                "title": "Documentic: Export Markdown",
+                "icon": {
+                    "light": "resources/icons/export-light.svg",
+                    "dark": "resources/icons/export-dark.svg"
+                }
+            },
+            {
+                "command": "documenticMarkdown.exportDiagramBlocksPng",
+                "title": "Documentic: Export Diagram Blocks to PNG Folder"
             },
             {
                 "command": "documenticMarkdown.exportToPdf",

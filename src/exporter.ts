@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { buildHtmlDocument, collectKrokiSvgs, createMarkdownRenderer } from './rendering';
 
-export type ExportFormat = 'pdf' | 'html' | 'png';
+export type ExportFormat = 'pdf' | 'html' | 'png' | 'diagram-pngs';
 
 const execFileAsync = promisify(execFile);
 
@@ -30,11 +30,12 @@ async function chooseExportFormat(forced?: ExportFormat): Promise<ExportFormat |
         [
             { label: 'PDF', value: 'pdf' as const },
             { label: 'HTML', value: 'html' as const },
-            { label: 'PNG', value: 'png' as const }
+            { label: 'PNG', value: 'png' as const },
+            { label: '図ブロックPNG一括（フォルダ）', value: 'diagram-pngs' as const }
         ],
         {
             title: '出力形式を選択',
-            placeHolder: 'PDF / HTML / PNG'
+            placeHolder: 'PDF / HTML / PNG / 図ブロックPNG一括'
         }
     );
 
@@ -42,16 +43,30 @@ async function chooseExportFormat(forced?: ExportFormat): Promise<ExportFormat |
 }
 
 async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): Promise<vscode.Uri | undefined> {
+    if (format === 'diagram-pngs') {
+        const selected = await vscode.window.showOpenDialog({
+            title: '保存先フォルダを選択',
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            defaultUri: vscode.Uri.file(path.dirname(currentFile.fsPath))
+        });
+
+        return selected?.[0];
+    }
+
     const titleMap: Record<ExportFormat, string> = {
         pdf: 'PDFの保存先を選択',
         html: 'HTMLの保存先を選択',
-        png: 'PNGの保存先を選択'
+        png: 'PNGの保存先を選択',
+        'diagram-pngs': '保存先フォルダを選択'
     };
 
     const filterMap: Record<ExportFormat, Record<string, string[]>> = {
         pdf: { PDF: ['pdf'] },
         html: { HTML: ['html'] },
-        png: { PNG: ['png'] }
+        png: { PNG: ['png'] },
+        'diagram-pngs': {}
     };
 
     return vscode.window.showSaveDialog({
@@ -59,6 +74,49 @@ async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): 
         defaultUri: getDefaultOutputUri(currentFile, format),
         filters: filterMap[format]
     });
+}
+
+async function ensureCreatedDiagramOutputDir(baseDir: string, markdownFilePath: string): Promise<string> {
+    const baseName = path.parse(markdownFilePath).name;
+    const rootName = `${baseName}-diagram-pngs`;
+
+    for (let attempt = 0; attempt < 1000; attempt += 1) {
+        const suffix = attempt === 0 ? '' : `-${attempt + 1}`;
+        const candidate = path.join(baseDir, `${rootName}${suffix}`);
+
+        try {
+            await fs.mkdir(candidate);
+            return candidate;
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+                throw error;
+            }
+        }
+    }
+
+    throw new Error('図ブロックPNG保存フォルダを作成できませんでした。');
+}
+
+async function exportDiagramBlocksAsPng(page: Page, outputDir: string): Promise<number> {
+    await fs.mkdir(outputDir, { recursive: true });
+
+    const handles = await page.$$('.mermaid svg, .kroki-svg svg, .math-block svg');
+    let savedCount = 0;
+
+    for (let index = 0; index < handles.length; index += 1) {
+        const handle = handles[index];
+        try {
+            const name = `diagram-${String(index + 1).padStart(3, '0')}.png`;
+            const filePath = path.join(outputDir, name);
+            await handle.screenshot({ path: filePath, type: 'png' });
+            savedCount += 1;
+        } catch {
+        } finally {
+            await handle.dispose();
+        }
+    }
+
+    return savedCount;
 }
 
 async function openRenderedPage(
@@ -145,6 +203,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
     if (!targetUri) {
         return;
     }
+    let outputUriToOpen = targetUri;
 
     await vscode.window.withProgress(
         {
@@ -206,7 +265,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                         }
                     });
                     vscode.window.showInformationMessage(`PDFを出力しました: ${targetUri.fsPath}`);
-                } else {
+                } else if (format === 'png') {
                     progress.report({ message: 'PNGを書き出しています...', increment: 15 });
                     await opened.page.screenshot({
                         path: targetUri.fsPath,
@@ -214,6 +273,12 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                         type: 'png'
                     });
                     vscode.window.showInformationMessage(`PNGを出力しました: ${targetUri.fsPath}`);
+                } else {
+                    progress.report({ message: '図ブロックPNGを保存しています...', increment: 15 });
+                    const outputDir = await ensureCreatedDiagramOutputDir(targetUri.fsPath, currentFile.fsPath);
+                    const count = await exportDiagramBlocksAsPng(opened.page, outputDir);
+                    outputUriToOpen = vscode.Uri.file(outputDir);
+                    vscode.window.showInformationMessage(`図ブロックPNGを保存しました: ${outputDir}（${count}件）`);
                 }
 
                 exportCompleted = true;
@@ -241,7 +306,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             }
 
             if (exportCompleted) {
-                await openOutputIfEnabled(targetUri, format);
+                await openOutputIfEnabled(outputUriToOpen, format);
 
                 if (renderErrors.length > 0) {
                     vscode.window.showWarningMessage(`一部の図/数式の描画に失敗しました: ${renderErrors.join(' | ')}`);

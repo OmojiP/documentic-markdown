@@ -6,11 +6,15 @@ export function activate(context: vscode.ExtensionContext): void {
         await exportActiveMarkdown(context);
     });
 
+    const exportDiagramPngsCommand = vscode.commands.registerCommand('documenticMarkdown.exportDiagramBlocksPng', async () => {
+        await exportActiveMarkdown(context, 'diagram-pngs');
+    });
+
     const legacyPdfCommand = vscode.commands.registerCommand('documenticMarkdown.exportToPdf', async () => {
         await exportActiveMarkdown(context, 'pdf');
     });
 
-    context.subscriptions.push(exportCommand, legacyPdfCommand);
+    context.subscriptions.push(exportCommand, exportDiagramPngsCommand, legacyPdfCommand);
 }
 
 export function deactivate(): void {
