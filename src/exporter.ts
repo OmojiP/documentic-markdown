@@ -12,6 +12,67 @@ export type ExportFormat = 'pdf' | 'html' | 'png' | 'diagram-pngs';
 
 const execFileAsync = promisify(execFile);
 
+function normalizeDisplayMathBlocks(markdown: string): string {
+    const lines = markdown.split(/\r?\n/);
+    const output: string[] = [];
+
+    let inCodeFence = false;
+    let inMathBlock = false;
+    let mathLines: string[] = [];
+
+    for (const line of lines) {
+        if (!inMathBlock && /^```/.test(line.trim())) {
+            inCodeFence = !inCodeFence;
+            output.push(line);
+            continue;
+        }
+
+        if (inCodeFence) {
+            output.push(line);
+            continue;
+        }
+
+        const trimmed = line.trim();
+
+        if (!inMathBlock) {
+            const oneLine = trimmed.match(/^\$\$(.+)\$\$$/);
+            if (oneLine) {
+                output.push('```tex');
+                output.push(oneLine[1].trim());
+                output.push('```');
+                continue;
+            }
+
+            if (trimmed === '$$') {
+                inMathBlock = true;
+                mathLines = [];
+                continue;
+            }
+
+            output.push(line);
+            continue;
+        }
+
+        if (trimmed === '$$') {
+            output.push('```tex');
+            output.push(mathLines.join('\n'));
+            output.push('```');
+            inMathBlock = false;
+            mathLines = [];
+            continue;
+        }
+
+        mathLines.push(line);
+    }
+
+    if (inMathBlock) {
+        output.push('$$');
+        output.push(...mathLines);
+    }
+
+    return output.join('\n');
+}
+
 function getDefaultOutputUri(inputUri: vscode.Uri, format: ExportFormat): vscode.Uri {
     const ext = `.${format}`;
     const outputPath = inputUri.path.replace(/\.(md|markdown)$/i, ext);
@@ -212,7 +273,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             cancellable: false
         },
         async (progress) => {
-            const markdownText = editor.document.getText();
+            const markdownText = normalizeDisplayMathBlocks(editor.document.getText());
             const config = vscode.workspace.getConfiguration('documenticMarkdown');
             const includeUml = config.get<boolean>('includeUml', true);
             const includeKroki = config.get<boolean>('includeKroki', true);

@@ -75,10 +75,12 @@ public class HelloWorld {
 # 7. TeX
 
 ```tex
-\frac{a^2 + b^2}{c^2} = 1
+\frac{df}{dx} = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}
 ```
 
 $E = mc^2$
+
+$$F = ma$$
 
 ---
 
