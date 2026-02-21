@@ -2,7 +2,7 @@
     "config.title": "Documentic Markdown PDF",
     "config.untrustedMarkdownProtection.description": "未信頼Markdownの保護モードです。true のときは Kroki 描画と生HTML描画を無効化します。",
     "config.allowRawHtml.description": "Markdown内の生HTMLを許可します。untrustedMarkdownProtection が false の場合のみ有効です。",
-    "config.includeKroki.description": "Kroki対応フェンスブロックをSVG化します（PlantUML/UMLを含む）。untrustedMarkdownProtection が false の場合のみ有効です。",
+    "config.includeKroki.description": "Kroki対応コードブロックをSVG化します（PlantUML/UMLを含む）。untrustedMarkdownProtection が false の場合のみ有効です。",
     "config.pdfFormat.description": "PDFのページサイズ。",
     "config.openOutputAfterExport.description": "出力後にファイルを自動で開きます（PDF/HTMLはブラウザ、PNGは既定アプリ）。",
     "config.renderTimeoutMilliSecond.description": "出力前に Mermaid/Math の描画完了を待つタイムアウト（ミリ秒）。",

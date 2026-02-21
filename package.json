@@ -45,37 +45,14 @@
                 "documenticMarkdown.untrustedMarkdownProtection": {
                     "type": "boolean",
                     "default": true,
+                    "order": 1,
                     "description": "%config.untrustedMarkdownProtection.description%"
-                },
-                "documenticMarkdown.allowRawHtml": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "%config.allowRawHtml.description%"
                 },
                 "documenticMarkdown.includeKroki": {
                     "type": "boolean",
                     "default": true,
+                    "order": 2,
                     "description": "%config.includeKroki.description%"
-                },
-                "documenticMarkdown.pdfFormat": {
-                    "type": "string",
-                    "enum": [
-                        "A4",
-                        "Letter"
-                    ],
-                    "default": "A4",
-                    "description": "%config.pdfFormat.description%"
-                },
-                "documenticMarkdown.openOutputAfterExport": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "%config.openOutputAfterExport.description%"
-                },
-                "documenticMarkdown.renderTimeoutMilliSecond": {
-                    "type": "number",
-                    "default": 10000,
-                    "minimum": 1000,
-                    "description": "%config.renderTimeoutMilliSecond.description%"
                 },
                 "documenticMarkdown.pngQuality": {
                     "type": "string",
@@ -85,7 +62,37 @@
                         "high"
                     ],
                     "default": "medium",
+                    "order": 3,
                     "description": "%config.pngQuality.description%"
+                },
+                "documenticMarkdown.allowRawHtml": {
+                    "type": "boolean",
+                    "default": false,
+                    "order": 4,
+                    "description": "%config.allowRawHtml.description%"
+                },
+                "documenticMarkdown.openOutputAfterExport": {
+                    "type": "boolean",
+                    "default": true,
+                    "order": 5,
+                    "description": "%config.openOutputAfterExport.description%"
+                },
+                "documenticMarkdown.pdfFormat": {
+                    "type": "string",
+                    "enum": [
+                        "A4",
+                        "Letter"
+                    ],
+                    "default": "A4",
+                    "order": 6,
+                    "description": "%config.pdfFormat.description%"
+                },
+                "documenticMarkdown.renderTimeoutMilliSecond": {
+                    "type": "number",
+                    "default": 10000,
+                    "minimum": 1000,
+                    "order": 7,
+                    "description": "%config.renderTimeoutMilliSecond.description%"
                 }
             }
         }

@@ -13,8 +13,8 @@ export type PngQualityPreset = 'low' | 'medium' | 'high';
 
 const execFileAsync = promisify(execFile);
 
-// EN: Convert $$...$$ display math blocks into ```tex fences for unified rendering.
-// JA: $$...$$ の数式ブロックを ```tex フェンスに変換し、描画処理を統一します。
+// EN: Convert $$...$$ display math blocks into ```tex code blocks for unified rendering.
+// JA: $$...$$ の数式ブロックを ```tex コードブロックに変換し、描画処理を統一します。
 export function normalizeDisplayMathBlocks(markdown: string): string {
     const lines = markdown.split(/\r?\n/);
     const output: string[] = [];

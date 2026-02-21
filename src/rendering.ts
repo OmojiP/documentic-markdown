@@ -70,8 +70,8 @@ function normalizeKrokiType(language: string): string | undefined {
 }
 
 export function createMarkdownRenderer(allowRawHtml: boolean): MarkdownIt {
-    // EN: Renderer converts fenced diagram/math blocks into embeddable HTML containers.
-    // JA: フェンス化された図/数式ブロックを埋め込み用HTMLコンテナへ変換します。
+    // EN: Renderer converts diagram/math code blocks into embeddable HTML containers.
+    // JA: 図/数式のコードブロックを埋め込み用HTMLコンテナへ変換します。
     const md = new MarkdownIt({
         html: allowRawHtml,
         linkify: true,
