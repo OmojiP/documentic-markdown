@@ -2,433 +2,26 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { pathToFileURL } from 'node:url';
-import { PNG } from 'pngjs';
-import puppeteer, { type Browser, type Page } from 'puppeteer';
+import { type Browser } from 'puppeteer';
 import { buildHtmlDocument, collectKrokiSvgs, createMarkdownRenderer } from './rendering';
-
-export type ExportFormat = 'pdf' | 'html' | 'png' | 'diagram-pngs' | 'diagram-svgs';
-type PngQualityPreset = 'low' | 'medium' | 'high';
-
-const execFileAsync = promisify(execFile);
-
-function normalizeDisplayMathBlocks(markdown: string): string {
-    const lines = markdown.split(/\r?\n/);
-    const output: string[] = [];
-
-    let inCodeFence = false;
-    let inMathBlock = false;
-    let mathLines: string[] = [];
-
-    for (const line of lines) {
-        if (!inMathBlock && /^```/.test(line.trim())) {
-            inCodeFence = !inCodeFence;
-            output.push(line);
-            continue;
-        }
-
-        if (inCodeFence) {
-            output.push(line);
-            continue;
-        }
-
-        const trimmed = line.trim();
-
-        if (!inMathBlock) {
-            const oneLine = trimmed.match(/^\$\$(.+)\$\$$/);
-            if (oneLine) {
-                output.push('```tex');
-                output.push(oneLine[1].trim());
-                output.push('```');
-                continue;
-            }
-
-            if (trimmed === '$$') {
-                inMathBlock = true;
-                mathLines = [];
-                continue;
-            }
-
-            output.push(line);
-            continue;
-        }
-
-        if (trimmed === '$$') {
-            output.push('```tex');
-            output.push(mathLines.join('\n'));
-            output.push('```');
-            inMathBlock = false;
-            mathLines = [];
-            continue;
-        }
-
-        mathLines.push(line);
-    }
-
-    if (inMathBlock) {
-        output.push('$$');
-        output.push(...mathLines);
-    }
-
-    return output.join('\n');
-}
-
-function getDefaultOutputUri(inputUri: vscode.Uri, format: ExportFormat): vscode.Uri {
-    const ext = `.${format}`;
-    const outputPath = inputUri.path.replace(/\.(md|markdown)$/i, ext);
-    if (outputPath !== inputUri.path) {
-        return inputUri.with({ path: outputPath });
-    }
-    return inputUri.with({ path: `${inputUri.path}${ext}` });
-}
-
-async function chooseExportFormat(forced?: ExportFormat): Promise<ExportFormat | undefined> {
-    if (forced) {
-        return forced;
-    }
-
-    const picked = await vscode.window.showQuickPick(
-        [
-            { label: 'PDF', value: 'pdf' as const },
-            { label: 'HTML', value: 'html' as const },
-            { label: 'PNG', value: 'png' as const },
-            { label: '図ブロックPNG一括（フォルダ）', value: 'diagram-pngs' as const },
-            { label: '図ブロックSVG一括（フォルダ）', value: 'diagram-svgs' as const }
-        ],
-        {
-            title: '出力形式を選択',
-            placeHolder: 'PDF / HTML / PNG / 図ブロックPNG一括 / 図ブロックSVG一括'
-        }
-    );
-
-    return picked?.value;
-}
-
-async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): Promise<vscode.Uri | undefined> {
-    if (format === 'diagram-pngs' || format === 'diagram-svgs') {
-        const selected = await vscode.window.showOpenDialog({
-            title: '保存先フォルダを選択',
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            defaultUri: vscode.Uri.file(path.dirname(currentFile.fsPath))
-        });
-
-        return selected?.[0];
-    }
-
-    const titleMap: Record<ExportFormat, string> = {
-        pdf: 'PDFの保存先を選択',
-        html: 'HTMLの保存先を選択',
-        png: 'PNGの保存先を選択',
-        'diagram-pngs': '保存先フォルダを選択',
-        'diagram-svgs': '保存先フォルダを選択'
-    };
-
-    const filterMap: Record<ExportFormat, Record<string, string[]>> = {
-        pdf: { PDF: ['pdf'] },
-        html: { HTML: ['html'] },
-        png: { PNG: ['png'] },
-        'diagram-pngs': {},
-        'diagram-svgs': {}
-    };
-
-    return vscode.window.showSaveDialog({
-        title: titleMap[format],
-        defaultUri: getDefaultOutputUri(currentFile, format),
-        filters: filterMap[format]
-    });
-}
-
-async function ensureCreatedDiagramOutputDir(baseDir: string, markdownFilePath: string, suffixName: string): Promise<string> {
-    const baseName = path.parse(markdownFilePath).name;
-    const rootName = `${baseName}-${suffixName}`;
-
-    for (let attempt = 0; attempt < 1000; attempt += 1) {
-        const suffix = attempt === 0 ? '' : `-${attempt + 1}`;
-        const candidate = path.join(baseDir, `${rootName}${suffix}`);
-
-        try {
-            await fs.mkdir(candidate);
-            return candidate;
-        } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
-                throw error;
-            }
-        }
-    }
-
-    throw new Error('図ブロック保存フォルダを作成できませんでした。');
-}
-
-function normalizePngQualityScale(value: number): number {
-    if (!Number.isFinite(value)) {
-        return 1;
-    }
-    return Math.min(4, Math.max(1, Math.round(value)));
-}
-
-function resolvePngQualityScale(config: vscode.WorkspaceConfiguration): number {
-    const preset = config.get<PngQualityPreset>('pngQuality');
-    if (preset === 'low') {
-        return 1;
-    }
-    if (preset === 'medium') {
-        return 2;
-    }
-    if (preset === 'high') {
-        return 3;
-    }
-
-    return normalizePngQualityScale(config.get<number>('pngQualityScale', 1));
-}
-
-async function applyPngQualityScale(page: Page, scale: number): Promise<void> {
-    const currentViewport = page.viewport() ?? { width: 1280, height: 720, deviceScaleFactor: 1 };
-    await page.setViewport({
-        width: currentViewport.width,
-        height: currentViewport.height,
-        deviceScaleFactor: scale
-    });
-}
-
-async function exportWholePageAsPng(page: Page, outputPath: string): Promise<number> {
-    try {
-        const layout = await page.evaluate(() => {
-            const root = document.documentElement;
-            const body = document.body;
-            const width = Math.max(root.scrollWidth, root.clientWidth, body?.scrollWidth ?? 0);
-            const height = Math.max(root.scrollHeight, root.clientHeight, body?.scrollHeight ?? 0);
-            return {
-                width: Math.ceil(width),
-                height: Math.ceil(height)
-            };
-        });
-
-        const currentViewport = page.viewport() ?? { width: 1280, height: 720, deviceScaleFactor: 1 };
-        const targetWidth = Math.max(currentViewport.width, layout.width);
-        const segmentHeight = Math.min(2000, Math.max(800, currentViewport.height));
-        const requestedScale = currentViewport.deviceScaleFactor || 1;
-        const maxSafeDimension = 32000;
-        const maxScaleByWidth = Math.max(1, Math.floor(maxSafeDimension / Math.max(1, layout.width)));
-        const maxScaleByHeight = Math.max(1, Math.floor(maxSafeDimension / Math.max(1, layout.height)));
-        const deviceScaleFactor = Math.max(1, Math.min(requestedScale, maxScaleByWidth, maxScaleByHeight));
-        await page.setViewport({
-            width: targetWidth,
-            height: segmentHeight,
-            deviceScaleFactor
-        });
-
-        await page.evaluate(() => window.scrollTo(0, 0));
-        const captures: Array<{ y: number; image: PNG }> = [];
-        let previousY = -1;
-        let nextY = 0;
-
-        for (let guard = 0; guard < 2000; guard += 1) {
-            await page.evaluate((scrollY) => {
-                window.scrollTo(0, scrollY);
-            }, nextY);
-            await new Promise((resolve) => setTimeout(resolve, 40));
-
-            const actualY = await page.evaluate(() => Math.round(window.scrollY));
-            if (actualY === previousY) {
-                break;
-            }
-
-            const chunk = await page.screenshot({
-                type: 'png'
-            });
-
-            const chunkBuffer = Buffer.isBuffer(chunk)
-                ? chunk
-                : Buffer.from(chunk);
-            captures.push({ y: actualY, image: PNG.sync.read(chunkBuffer) });
-
-            previousY = actualY;
-            if (actualY + segmentHeight >= layout.height - 1) {
-                break;
-            }
-            nextY = actualY + segmentHeight;
-        }
-
-        if (captures.length === 0) {
-            throw new Error('PNG画像の生成に失敗しました。');
-        }
-
-        const stitchedWidth = Math.max(...captures.map((item) => item.image.width));
-        const stitchedHeight = Math.max(1, Math.round(layout.height * deviceScaleFactor));
-        const stitched = new PNG({ width: stitchedWidth, height: stitchedHeight });
-
-        for (const capture of captures) {
-            const offsetY = Math.round(capture.y * deviceScaleFactor);
-            const writableHeight = Math.max(0, Math.min(capture.image.height, stitched.height - offsetY));
-            if (writableHeight <= 0) {
-                continue;
-            }
-
-            PNG.bitblt(capture.image, stitched, 0, 0, capture.image.width, writableHeight, 0, offsetY);
-        }
-
-        await fs.writeFile(outputPath, PNG.sync.write(stitched));
-        return deviceScaleFactor;
-    } catch (chunkError) {
-        try {
-            await page.screenshot({
-                path: outputPath,
-                fullPage: true,
-                type: 'png'
-            });
-            return page.viewport()?.deviceScaleFactor || 1;
-        } catch (fallbackError) {
-            const first = chunkError instanceof Error ? chunkError.message : String(chunkError);
-            const second = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-            throw new Error(`PNG画像の生成に失敗しました（分割撮影: ${first} / fullPageフォールバック: ${second}）`);
-        }
-    }
-}
-
-async function exportDiagramBlocksAsPng(page: Page, outputDir: string): Promise<number> {
-    await fs.mkdir(outputDir, { recursive: true });
-
-    const handles = await page.$$('.mermaid svg, .kroki-svg svg, .math-block svg');
-    let savedCount = 0;
-
-    for (let index = 0; index < handles.length; index += 1) {
-        const handle = handles[index];
-        try {
-            const name = `diagram-${String(index + 1).padStart(3, '0')}.png`;
-            const filePath = path.join(outputDir, name);
-            await handle.screenshot({ path: filePath, type: 'png' });
-            savedCount += 1;
-        } catch {
-        } finally {
-            await handle.dispose();
-        }
-    }
-
-    return savedCount;
-}
-
-async function exportDiagramBlocksAsSvg(page: Page, outputDir: string): Promise<number> {
-    await fs.mkdir(outputDir, { recursive: true });
-
-    const svgSources = await page.evaluate(() => {
-        const svgNs = 'http://www.w3.org/2000/svg';
-        const globalCache = document.querySelector<SVGElement>('#MJX-SVG-global-cache');
-        const globalDefs = globalCache?.querySelector('defs')?.innerHTML ?? '';
-        const targets = document.querySelectorAll<SVGSVGElement>('.mermaid svg, .kroki-svg svg, .math-block svg');
-        return Array.from(targets).map((svg) => {
-            const cloned = svg.cloneNode(true) as SVGSVGElement;
-            const isMathSvg = Boolean(svg.closest('.math-block'));
-
-            if (!cloned.getAttribute('xmlns')) {
-                cloned.setAttribute('xmlns', svgNs);
-            }
-            if (!cloned.getAttribute('xmlns:xlink')) {
-                cloned.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-            }
-
-            if (isMathSvg && globalDefs) {
-                const hasMathRef = /(?:xlink:href|href)="#MJX-/.test(cloned.outerHTML);
-                if (hasMathRef) {
-                    let defs = cloned.querySelector('defs');
-                    if (!defs) {
-                        defs = document.createElementNS(svgNs, 'defs');
-                        cloned.insertBefore(defs, cloned.firstChild);
-                    }
-                    defs.insertAdjacentHTML('beforeend', globalDefs);
-                }
-            }
-
-            return cloned.outerHTML;
-        });
-    });
-
-    let savedCount = 0;
-    for (let index = 0; index < svgSources.length; index += 1) {
-        const source = svgSources[index];
-        try {
-            const name = `diagram-${String(index + 1).padStart(3, '0')}.svg`;
-            const filePath = path.join(outputDir, name);
-            await fs.writeFile(filePath, source, 'utf8');
-            savedCount += 1;
-        } catch {
-        }
-    }
-
-    return savedCount;
-}
-
-async function openRenderedPage(
-    tempHtmlPath: string,
-    renderTimeoutMilliSecond: number
-): Promise<{ browser: Browser; page: Page; renderErrors: string[] }> {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
-
-    await page.goto(`file:///${tempHtmlPath.replace(/\\/g, '/')}`, {
-        waitUntil: 'networkidle0'
-    });
-
-    await page.waitForFunction('window.__MERMAID_RENDER_DONE__ === true && window.__MATH_RENDER_DONE__ === true', {
-        timeout: renderTimeoutMilliSecond
-    });
-
-    const renderErrors = await page.evaluate(() => {
-        const errors = (window as Window & { __RENDER_ERRORS__?: unknown }).__RENDER_ERRORS__;
-        return Array.isArray(errors) ? errors.map((item) => String(item)) : [];
-    });
-
-    return { browser, page, renderErrors };
-}
-
-async function openOutputIfEnabled(targetUri: vscode.Uri, format: ExportFormat): Promise<void> {
-    const config = vscode.workspace.getConfiguration('documenticMarkdown');
-    const shouldOpen = config.get<boolean>('openOutputAfterExport', true);
-    if (!shouldOpen) {
-        return;
-    }
-
-    const normalizedFileUri = vscode.Uri.file(targetUri.fsPath);
-
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-        try {
-            await fs.access(targetUri.fsPath);
-            break;
-        } catch {
-            await new Promise((resolve) => setTimeout(resolve, 120));
-        }
-    }
-
-    const fileUrl = pathToFileURL(targetUri.fsPath).toString();
-    const openTarget = process.platform === 'win32'
-        ? targetUri.fsPath
-        : (format === 'png' ? targetUri.fsPath : fileUrl);
-
-    try {
-        if (process.platform === 'win32') {
-            await execFileAsync('cmd.exe', ['/c', 'start', '', openTarget]);
-            return;
-        }
-
-        if (process.platform === 'darwin') {
-            await execFileAsync('open', [openTarget]);
-            return;
-        }
-
-        await execFileAsync('xdg-open', [openTarget]);
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        const fallbackOk = await vscode.env.openExternal(normalizedFileUri);
-        if (!fallbackOk) {
-            vscode.window.showWarningMessage(`出力ファイルの自動オープンに失敗しました: ${message}`);
-        }
-    }
-}
+import {
+    type ExportFormat,
+    normalizeDisplayMathBlocks,
+    chooseExportFormat,
+    chooseOutputPath,
+    ensureCreatedDiagramOutputDir,
+    resolvePngQualityScale,
+    applyPngQualityScale,
+    exportWholePageAsPng,
+    exportDiagramBlocksAsPng,
+    exportDiagramBlocksAsSvg,
+    openRenderedPage,
+    openOutputIfEnabled
+} from './export-helpers';
 
 export async function exportActiveMarkdown(context: vscode.ExtensionContext, forcedFormat?: ExportFormat): Promise<void> {
+    // EN: Main export orchestration from active editor to target format.
+    // JA: アクティブエディタから指定形式へ出力するメイン処理です。
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'markdown') {
         vscode.window.showErrorMessage('Markdownファイルを開いてから実行してください。');
@@ -440,6 +33,8 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
         return;
     }
 
+    // EN: Resolve destination file/folder before starting heavy rendering work.
+    // JA: 重い描画処理に入る前に保存先（ファイル/フォルダ）を確定します。
     const currentFile = editor.document.uri;
     const targetUri = await chooseOutputPath(currentFile, format);
     if (!targetUri) {
@@ -454,25 +49,38 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             cancellable: false
         },
         async (progress) => {
+            // EN: Build render inputs based on workspace security/output settings.
+            // JA: ワークスペース設定（セキュリティ・出力）をもとに描画入力を構築します。
             const markdownText = normalizeDisplayMathBlocks(editor.document.getText());
             const config = vscode.workspace.getConfiguration('documenticMarkdown');
-            const includeUml = config.get<boolean>('includeUml', true);
+            const untrustedMarkdownProtection = config.get<boolean>('untrustedMarkdownProtection', true);
+            const allowRawHtmlByConfig = config.get<boolean>('allowRawHtml', false);
+            const allowRawHtml = !untrustedMarkdownProtection && allowRawHtmlByConfig;
+            const allowExternalHttp = !untrustedMarkdownProtection;
             const includeKroki = config.get<boolean>('includeKroki', true);
             const pdfFormat = config.get<'A4' | 'Letter'>('pdfFormat', 'A4');
             const pngQualityScale = resolvePngQualityScale(config);
             const configuredTimeout = config.get<number>('renderTimeoutMilliSecond', config.get<number>('renderTimeoutMs', 10000));
             const renderTimeoutMilliSecond = Math.max(1000, configuredTimeout);
+            const mermaidScriptPath = path.join(context.extensionPath, 'node_modules', 'mermaid', 'dist', 'mermaid.min.js');
+            const mathJaxScriptPath = path.join(context.extensionPath, 'node_modules', 'mathjax-full', 'es5', 'tex-svg.js');
+            const mermaidScript = await fs.readFile(mermaidScriptPath, 'utf8');
+            const mathJaxScript = await fs.readFile(mathJaxScriptPath, 'utf8');
 
             progress.report({ message: '図を解析しています...', increment: 15 });
-            const krokiSvgMap = await collectKrokiSvgs(markdownText, { includeUml, includeKroki });
+            const krokiSvgMap = await collectKrokiSvgs(markdownText, { includeKroki, allowExternalHttp });
 
+            // EN: Build final HTML document that Puppeteer will render.
+            // JA: Puppeteerで描画する最終HTMLドキュメントを生成します。
             progress.report({ message: 'HTMLを生成しています...', increment: 25 });
             const cssPath = path.join(context.extensionPath, 'resources', 'github-markdown.css');
             const css = await fs.readFile(cssPath, 'utf8');
-            const md = createMarkdownRenderer();
+            const md = createMarkdownRenderer(allowRawHtml);
             const htmlBody = md.render(markdownText, { krokiSvgMap });
-            const html = buildHtmlDocument(htmlBody, css);
+            const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript });
 
+            // EN: HTML export is a fast path and does not require browser rendering.
+            // JA: HTML出力はブラウザ描画を必要としないため、この時点で完了できます。
             if (format === 'html') {
                 progress.report({ message: 'HTMLを書き出しています...', increment: 40 });
                 await fs.writeFile(targetUri.fsPath, html, 'utf8');
@@ -482,6 +90,8 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                 return;
             }
 
+            // EN: Other formats use temporary HTML rendered in headless browser.
+            // JA: それ以外の形式は一時HTMLをヘッドレスブラウザで描画して出力します。
             const tempHtmlPath = path.join(os.tmpdir(), `documentic-markdown-${Date.now()}.html`);
             await fs.writeFile(tempHtmlPath, html, 'utf8');
 
@@ -494,6 +104,8 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                 browser = opened.browser;
                 renderErrors = opened.renderErrors;
 
+                // EN: Branch export behavior by selected output format.
+                // JA: 選択された出力形式ごとに保存処理を分岐します。
                 if (format === 'pdf') {
                     progress.report({ message: 'PDFを書き出しています...', increment: 15 });
                     await opened.page.pdf({
@@ -547,6 +159,8 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                     vscode.window.showErrorMessage(`出力に失敗しました: ${message}`);
                 }
             } finally {
+                // EN: Always release browser and temporary HTML file.
+                // JA: ブラウザと一時HTMLを必ず解放します。
                 try {
                     await browser?.close();
                 } catch {
@@ -557,6 +171,8 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                 }
             }
 
+            // EN: Open output and report non-fatal render warnings after successful export.
+            // JA: 正常出力後にファイルを開き、非致命な描画警告を通知します。
             if (exportCompleted) {
                 await openOutputIfEnabled(outputUriToOpen, format);
 

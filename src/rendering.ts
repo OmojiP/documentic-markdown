@@ -1,8 +1,8 @@
 import MarkdownIt from 'markdown-it';
 
 export type KrokiRenderOptions = {
-    includeUml: boolean;
     includeKroki: boolean;
+    allowExternalHttp: boolean;
 };
 
 const UML_LANGUAGE = 'plantuml';
@@ -69,9 +69,11 @@ function normalizeKrokiType(language: string): string | undefined {
     return language;
 }
 
-export function createMarkdownRenderer(): MarkdownIt {
+export function createMarkdownRenderer(allowRawHtml: boolean): MarkdownIt {
+    // EN: Renderer converts fenced diagram/math blocks into embeddable HTML containers.
+    // JA: フェンス化された図/数式ブロックを埋め込み用HTMLコンテナへ変換します。
     const md = new MarkdownIt({
-        html: true,
+        html: allowRawHtml,
         linkify: true,
         breaks: false,
         typographer: true
@@ -138,7 +140,13 @@ async function renderKrokiToSvg(krokiType: string, source: string): Promise<stri
 }
 
 export async function collectKrokiSvgs(markdown: string, options: KrokiRenderOptions): Promise<Record<string, string>> {
+    // EN: Pre-fetch SVGs from Kroki so rendering phase can inject them without extra parsing.
+    // JA: KrokiのSVGを事前取得し、描画フェーズで再解析せず埋め込めるようにします。
     const result: Record<string, string> = {};
+    if (!options.allowExternalHttp) {
+        return result;
+    }
+
     const fencedBlockRegex = /```([^\n`]*)\n([\s\S]*?)```/g;
 
     for (const match of markdown.matchAll(fencedBlockRegex)) {
@@ -148,11 +156,7 @@ export async function collectKrokiSvgs(markdown: string, options: KrokiRenderOpt
             continue;
         }
 
-        if (krokiType === UML_LANGUAGE && !options.includeUml) {
-            continue;
-        }
-
-        if (krokiType !== UML_LANGUAGE && !options.includeKroki) {
+        if (!options.includeKroki) {
             continue;
         }
 
@@ -171,7 +175,9 @@ export async function collectKrokiSvgs(markdown: string, options: KrokiRenderOpt
     return result;
 }
 
-export function buildHtmlDocument(markdownHtml: string, css: string): string {
+export function buildHtmlDocument(markdownHtml: string, css: string, runtime: { mermaidScript: string; mathJaxScript: string }): string {
+    // EN: Build standalone HTML with runtime hooks and completion flags for Puppeteer waits.
+    // JA: Puppeteer待機用の完了フラグを含む、自己完結HTMLを組み立てます。
     return `<!DOCTYPE html>
 <html lang="ja">
   <head>
@@ -187,12 +193,22 @@ export function buildHtmlDocument(markdownHtml: string, css: string): string {
       window.__MERMAID_RENDER_DONE__ = false;
       window.__MATH_RENDER_DONE__ = false;
       window.__RENDER_ERRORS__ = [];
+      const mermaidScriptText = ${JSON.stringify(runtime.mermaidScript)};
+      const mathJaxScriptText = ${JSON.stringify(runtime.mathJaxScript)};
 
       try {
-        const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
         const blocks = Array.from(document.querySelectorAll('.mermaid'));
         if (blocks.length > 0) {
+          const script = document.createElement('script');
+          script.textContent = mermaidScriptText;
+          document.head.appendChild(script);
+
+          const mermaid = window.mermaid;
+          if (!mermaid) {
+            throw new Error('Mermaid runtime is not available');
+          }
+
+          mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
           await mermaid.run({ nodes: blocks });
         }
       } catch (error) {
@@ -212,14 +228,9 @@ export function buildHtmlDocument(markdownHtml: string, css: string): string {
             svg: { fontCache: 'global' }
           };
 
-          await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
-            script.async = true;
-            script.onload = resolve;
-            script.onerror = () => reject(new Error('MathJax load failed'));
-            document.head.appendChild(script);
-          });
+          const script = document.createElement('script');
+          script.textContent = mathJaxScriptText;
+          document.head.appendChild(script);
 
           if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
             await window.MathJax.typesetPromise();

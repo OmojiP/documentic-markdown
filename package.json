@@ -10,12 +10,6 @@
     "categories": [
         "Other"
     ],
-    "activationEvents": [
-        "onCommand:documenticMarkdown.export",
-        "onCommand:documenticMarkdown.exportDiagramBlocksPng",
-        "onCommand:documenticMarkdown.exportDiagramBlocksSvg",
-        "onCommand:documenticMarkdown.exportToPdf"
-    ],
     "main": "./dist/extension.js",
     "contributes": {
         "commands": [
@@ -34,10 +28,6 @@
             {
                 "command": "documenticMarkdown.exportDiagramBlocksSvg",
                 "title": "Documentic: Export Diagram Blocks to SVG Folder"
-            },
-            {
-                "command": "documenticMarkdown.exportToPdf",
-                "title": "Documentic: Export Markdown to PDF"
             }
         ],
         "menus": {
@@ -50,17 +40,22 @@
             ]
         },
         "configuration": {
-            "title": "Documentic Markdown PDF",
+            "title": "%config.title%",
             "properties": {
-                "documenticMarkdown.includeUml": {
+                "documenticMarkdown.untrustedMarkdownProtection": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Enable PlantUML/UML fenced block conversion to SVG via Kroki."
+                    "description": "%config.untrustedMarkdownProtection.description%"
+                },
+                "documenticMarkdown.allowRawHtml": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "%config.allowRawHtml.description%"
                 },
                 "documenticMarkdown.includeKroki": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Enable non-UML Kroki-supported fenced block conversion to SVG."
+                    "description": "%config.includeKroki.description%"
                 },
                 "documenticMarkdown.pdfFormat": {
                     "type": "string",
@@ -69,18 +64,18 @@
                         "Letter"
                     ],
                     "default": "A4",
-                    "description": "PDF page format."
+                    "description": "%config.pdfFormat.description%"
                 },
                 "documenticMarkdown.openOutputAfterExport": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Open output after export (PDF/HTML with external browser, PNG with system default app)."
+                    "description": "%config.openOutputAfterExport.description%"
                 },
                 "documenticMarkdown.renderTimeoutMilliSecond": {
                     "type": "number",
                     "default": 10000,
                     "minimum": 1000,
-                    "description": "Timeout (milli second) for waiting Mermaid/Math rendering before export."
+                    "description": "%config.renderTimeoutMilliSecond.description%"
                 },
                 "documenticMarkdown.pngQuality": {
                     "type": "string",
@@ -90,7 +85,7 @@
                         "high"
                     ],
                     "default": "medium",
-                    "description": "PNG quality preset. low=1x, medium=2x, high=3x resolution scale."
+                    "description": "%config.pngQuality.description%"
                 }
             }
         }
@@ -109,6 +104,8 @@
     },
     "dependencies": {
         "markdown-it": "^14.1.0",
+        "mathjax-full": "^3.2.2",
+        "mermaid": "^11.12.0",
         "pngjs": "^7.0.0",
         "puppeteer": "^24.2.0"
     }
