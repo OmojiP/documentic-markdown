@@ -1,5 +1,5 @@
 {
-    "config.title": "Documentic Markdown PDF",
+    "config.title": "Documentic Markdown",
     "config.untrustedMarkdownProtection.description": "未信頼Markdownの保護モードです。true のときは Kroki 描画と生HTML描画を無効化します。",
     "config.allowRawHtml.description": "Markdown内の生HTMLを許可します。untrustedMarkdownProtection が false の場合のみ有効です。",
     "config.includeKroki.description": "Kroki対応コードブロックをSVG化します（PlantUML/UMLを含む）。untrustedMarkdownProtection が false の場合のみ有効です。",

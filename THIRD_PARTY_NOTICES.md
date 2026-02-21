@@ -1,6 +1,6 @@
 # THIRD_PARTY_NOTICES
 
-This file lists third-party components used by Documentic Markdown PDF.
+This file lists third-party components used by Documentic Markdown.
 Generated from runtime dependencies (npm production install) using license-checker.
 
 Generated at: 2026-02-21T11:29:04.575Z

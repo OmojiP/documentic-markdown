@@ -1,4 +1,4 @@
-# Documentic Markdown PDF
+# Documentic Markdown
 
 VS Code extension to export Markdown with diagrams (Mermaid / Kroki / Math) to PDF, HTML, and PNG.
 

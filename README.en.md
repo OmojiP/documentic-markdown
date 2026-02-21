@@ -1,4 +1,4 @@
-# Documentic Markdown PDF
+# Documentic Markdown
 
 A VS Code extension to export Markdown to PDF while preserving visual layout.
 

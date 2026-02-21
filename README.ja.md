@@ -1,4 +1,4 @@
-# Documentic Markdown PDF
+# Documentic Markdown
 
 Markdownを見た目付きでPDF化するVS Code拡張です。
 

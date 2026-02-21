@@ -1,6 +1,6 @@
 {
     "name": "documentic-markdown-pdf",
-    "displayName": "Documentic Markdown PDF",
+    "displayName": "Documentic Markdown",
     "description": "Export Markdown to PDF with Mermaid and Kroki-based diagram embedding.",
     "version": "0.0.1",
     "publisher": "local",

@@ -1,5 +1,5 @@
 {
-    "config.title": "Documentic Markdown PDF",
+    "config.title": "Documentic Markdown",
     "config.untrustedMarkdownProtection.description": "Protection mode for untrusted Markdown. When true, Kroki rendering and raw HTML rendering are blocked.",
     "config.allowRawHtml.description": "Allow raw HTML in Markdown. Effective only when untrustedMarkdownProtection is false.",
     "config.includeKroki.description": "Enable Kroki-supported code block conversion to SVG (including PlantUML/UML). Effective only when untrustedMarkdownProtection is false.",
