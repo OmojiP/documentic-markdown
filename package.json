@@ -1,15 +1,24 @@
 {
-    "name": "documentic-markdown-pdf",
+    "name": "documentic-markdown",
     "displayName": "Documentic Markdown",
-    "description": "Export Markdown to PDF with Mermaid and Kroki-based diagram embedding.",
+    "description": "Export Markdown to Document(PDF, HTML, PNG) with Mermaid and Kroki-based diagram embedding.",
     "version": "0.0.1",
     "publisher": "local",
     "license": "MIT",
     "engines": {
         "vscode": "^1.96.0"
     },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/OmojiP/documentic-markdown"
+    },
     "categories": [
         "Other"
+    ],
+    "activationEvents": [
+        "onCommand:documenticMarkdown.export",
+        "onCommand:documenticMarkdown.exportDiagramBlocksPng",
+        "onCommand:documenticMarkdown.exportDiagramBlocksSvg"
     ],
     "main": "./dist/extension.js",
     "contributes": {
