@@ -14,11 +14,13 @@ flowchart TD
 
 - graph
 
+`<br>`タグを使用した改行あり
+
 ```mermaid
 graph TD
-  A[Start] --> B{Check}
-  B -->|Yes| C[Done]
-  B -->|No| D[Retry]
+  A[Sta-<br>-rt] --> B{Che-<br>-ck}
+  B -->|Yes| C[Do-<br>-ne]
+  B -->|No| D[Re-<br>-try]
   D --> B
 ```
 
