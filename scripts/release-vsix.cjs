@@ -6,6 +6,7 @@ const path = require('node:path');
 
 function printUsage() {
     console.log('Usage: npm run release:vsix -- <version|patch|minor|major>');
+    console.log('Quick update: npm run vsix:update');
     console.log('');
     console.log('Examples:');
     console.log('  npm run release:vsix -- 0.1.1');
@@ -14,9 +15,12 @@ function printUsage() {
 }
 
 function run(command, args) {
-    const result = spawnSync(command, args, {
-        stdio: 'inherit',
-        shell: process.platform === 'win32'
+    const executable = process.platform === 'win32' && (command === 'npm' || command === 'npx')
+        ? `${command}.cmd`
+        : command;
+
+    const result = spawnSync(executable, args, {
+        stdio: 'inherit'
     });
 
     if (result.status !== 0) {

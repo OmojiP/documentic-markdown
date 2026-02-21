@@ -2,8 +2,8 @@
     "name": "documentic-markdown",
     "displayName": "Documentic Markdown",
     "description": "Export Markdown to Document(PDF, HTML, PNG) with Mermaid and Kroki-based diagram embedding.",
-    "version": "0.1.1",
-    "publisher": "local",
+    "version": "0.1.2",
+    "publisher": "ecbf7f07-1c26-6919-a834-fd9d001922fc",
     "license": "MIT",
     "engines": {
         "vscode": "^1.96.0"
@@ -112,7 +112,8 @@
         "watch": "tsc -watch -p ./",
         "package": "vsce package",
         "fixtures:export": "node scripts/export-test-fixtures.cjs",
-        "release:vsix": "node scripts/release-vsix.cjs"
+        "release:vsix": "node scripts/release-vsix.cjs",
+        "vsix:update": "node scripts/release-vsix.cjs patch"
     },
     "devDependencies": {
         "@types/markdown-it": "^14.1.2",
