@@ -5,6 +5,7 @@ import * as os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
+import { PNG } from 'pngjs';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { buildHtmlDocument, collectKrokiSvgs, createMarkdownRenderer } from './rendering';
 
@@ -191,6 +192,101 @@ async function applyPngQualityScale(page: Page, scale: number): Promise<void> {
         height: currentViewport.height,
         deviceScaleFactor: scale
     });
+}
+
+async function exportWholePageAsPng(page: Page, outputPath: string): Promise<number> {
+    try {
+        const layout = await page.evaluate(() => {
+            const root = document.documentElement;
+            const body = document.body;
+            const width = Math.max(root.scrollWidth, root.clientWidth, body?.scrollWidth ?? 0);
+            const height = Math.max(root.scrollHeight, root.clientHeight, body?.scrollHeight ?? 0);
+            return {
+                width: Math.ceil(width),
+                height: Math.ceil(height)
+            };
+        });
+
+        const currentViewport = page.viewport() ?? { width: 1280, height: 720, deviceScaleFactor: 1 };
+        const targetWidth = Math.max(currentViewport.width, layout.width);
+        const segmentHeight = Math.min(2000, Math.max(800, currentViewport.height));
+        const requestedScale = currentViewport.deviceScaleFactor || 1;
+        const maxSafeDimension = 32000;
+        const maxScaleByWidth = Math.max(1, Math.floor(maxSafeDimension / Math.max(1, layout.width)));
+        const maxScaleByHeight = Math.max(1, Math.floor(maxSafeDimension / Math.max(1, layout.height)));
+        const deviceScaleFactor = Math.max(1, Math.min(requestedScale, maxScaleByWidth, maxScaleByHeight));
+        await page.setViewport({
+            width: targetWidth,
+            height: segmentHeight,
+            deviceScaleFactor
+        });
+
+        await page.evaluate(() => window.scrollTo(0, 0));
+        const captures: Array<{ y: number; image: PNG }> = [];
+        let previousY = -1;
+        let nextY = 0;
+
+        for (let guard = 0; guard < 2000; guard += 1) {
+            await page.evaluate((scrollY) => {
+                window.scrollTo(0, scrollY);
+            }, nextY);
+            await new Promise((resolve) => setTimeout(resolve, 40));
+
+            const actualY = await page.evaluate(() => Math.round(window.scrollY));
+            if (actualY === previousY) {
+                break;
+            }
+
+            const chunk = await page.screenshot({
+                type: 'png'
+            });
+
+            const chunkBuffer = Buffer.isBuffer(chunk)
+                ? chunk
+                : Buffer.from(chunk);
+            captures.push({ y: actualY, image: PNG.sync.read(chunkBuffer) });
+
+            previousY = actualY;
+            if (actualY + segmentHeight >= layout.height - 1) {
+                break;
+            }
+            nextY = actualY + segmentHeight;
+        }
+
+        if (captures.length === 0) {
+            throw new Error('PNG画像の生成に失敗しました。');
+        }
+
+        const stitchedWidth = Math.max(...captures.map((item) => item.image.width));
+        const stitchedHeight = Math.max(1, Math.round(layout.height * deviceScaleFactor));
+        const stitched = new PNG({ width: stitchedWidth, height: stitchedHeight });
+
+        for (const capture of captures) {
+            const offsetY = Math.round(capture.y * deviceScaleFactor);
+            const writableHeight = Math.max(0, Math.min(capture.image.height, stitched.height - offsetY));
+            if (writableHeight <= 0) {
+                continue;
+            }
+
+            PNG.bitblt(capture.image, stitched, 0, 0, capture.image.width, writableHeight, 0, offsetY);
+        }
+
+        await fs.writeFile(outputPath, PNG.sync.write(stitched));
+        return deviceScaleFactor;
+    } catch (chunkError) {
+        try {
+            await page.screenshot({
+                path: outputPath,
+                fullPage: true,
+                type: 'png'
+            });
+            return page.viewport()?.deviceScaleFactor || 1;
+        } catch (fallbackError) {
+            const first = chunkError instanceof Error ? chunkError.message : String(chunkError);
+            const second = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+            throw new Error(`PNG画像の生成に失敗しました（分割撮影: ${first} / fullPageフォールバック: ${second}）`);
+        }
+    }
 }
 
 async function exportDiagramBlocksAsPng(page: Page, outputDir: string): Promise<number> {
@@ -415,12 +511,13 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                 } else if (format === 'png') {
                     progress.report({ message: 'PNGを書き出しています...', increment: 15 });
                     await applyPngQualityScale(opened.page, pngQualityScale);
-                    await opened.page.screenshot({
-                        path: targetUri.fsPath,
-                        fullPage: true,
-                        type: 'png'
-                    });
+                    const appliedScale = await exportWholePageAsPng(opened.page, targetUri.fsPath);
                     vscode.window.showInformationMessage(`PNGを出力しました: ${targetUri.fsPath}`);
+                    if (appliedScale < pngQualityScale) {
+                        vscode.window.showWarningMessage(
+                            `画像サイズ上限を超えるためPNG品質を自動調整しました（設定: ${pngQualityScale}x → 適用: ${appliedScale}x）。`
+                        );
+                    }
                 } else if (format === 'diagram-pngs') {
                     progress.report({ message: '図ブロックPNGを保存しています...', increment: 15 });
                     await applyPngQualityScale(opened.page, pngQualityScale);
