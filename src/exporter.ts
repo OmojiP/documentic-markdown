@@ -8,7 +8,8 @@ import { pathToFileURL } from 'node:url';
 import puppeteer, { type Browser, type Page } from 'puppeteer';
 import { buildHtmlDocument, collectKrokiSvgs, createMarkdownRenderer } from './rendering';
 
-export type ExportFormat = 'pdf' | 'html' | 'png' | 'diagram-pngs';
+export type ExportFormat = 'pdf' | 'html' | 'png' | 'diagram-pngs' | 'diagram-svgs';
+type PngQualityPreset = 'low' | 'medium' | 'high';
 
 const execFileAsync = promisify(execFile);
 
@@ -92,11 +93,12 @@ async function chooseExportFormat(forced?: ExportFormat): Promise<ExportFormat |
             { label: 'PDF', value: 'pdf' as const },
             { label: 'HTML', value: 'html' as const },
             { label: 'PNG', value: 'png' as const },
-            { label: '図ブロックPNG一括（フォルダ）', value: 'diagram-pngs' as const }
+            { label: '図ブロックPNG一括（フォルダ）', value: 'diagram-pngs' as const },
+            { label: '図ブロックSVG一括（フォルダ）', value: 'diagram-svgs' as const }
         ],
         {
             title: '出力形式を選択',
-            placeHolder: 'PDF / HTML / PNG / 図ブロックPNG一括'
+            placeHolder: 'PDF / HTML / PNG / 図ブロックPNG一括 / 図ブロックSVG一括'
         }
     );
 
@@ -104,7 +106,7 @@ async function chooseExportFormat(forced?: ExportFormat): Promise<ExportFormat |
 }
 
 async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): Promise<vscode.Uri | undefined> {
-    if (format === 'diagram-pngs') {
+    if (format === 'diagram-pngs' || format === 'diagram-svgs') {
         const selected = await vscode.window.showOpenDialog({
             title: '保存先フォルダを選択',
             canSelectFiles: false,
@@ -120,14 +122,16 @@ async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): 
         pdf: 'PDFの保存先を選択',
         html: 'HTMLの保存先を選択',
         png: 'PNGの保存先を選択',
-        'diagram-pngs': '保存先フォルダを選択'
+        'diagram-pngs': '保存先フォルダを選択',
+        'diagram-svgs': '保存先フォルダを選択'
     };
 
     const filterMap: Record<ExportFormat, Record<string, string[]>> = {
         pdf: { PDF: ['pdf'] },
         html: { HTML: ['html'] },
         png: { PNG: ['png'] },
-        'diagram-pngs': {}
+        'diagram-pngs': {},
+        'diagram-svgs': {}
     };
 
     return vscode.window.showSaveDialog({
@@ -137,9 +141,9 @@ async function chooseOutputPath(currentFile: vscode.Uri, format: ExportFormat): 
     });
 }
 
-async function ensureCreatedDiagramOutputDir(baseDir: string, markdownFilePath: string): Promise<string> {
+async function ensureCreatedDiagramOutputDir(baseDir: string, markdownFilePath: string, suffixName: string): Promise<string> {
     const baseName = path.parse(markdownFilePath).name;
-    const rootName = `${baseName}-diagram-pngs`;
+    const rootName = `${baseName}-${suffixName}`;
 
     for (let attempt = 0; attempt < 1000; attempt += 1) {
         const suffix = attempt === 0 ? '' : `-${attempt + 1}`;
@@ -155,7 +159,38 @@ async function ensureCreatedDiagramOutputDir(baseDir: string, markdownFilePath: 
         }
     }
 
-    throw new Error('図ブロックPNG保存フォルダを作成できませんでした。');
+    throw new Error('図ブロック保存フォルダを作成できませんでした。');
+}
+
+function normalizePngQualityScale(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 1;
+    }
+    return Math.min(4, Math.max(1, Math.round(value)));
+}
+
+function resolvePngQualityScale(config: vscode.WorkspaceConfiguration): number {
+    const preset = config.get<PngQualityPreset>('pngQuality');
+    if (preset === 'low') {
+        return 1;
+    }
+    if (preset === 'medium') {
+        return 2;
+    }
+    if (preset === 'high') {
+        return 3;
+    }
+
+    return normalizePngQualityScale(config.get<number>('pngQualityScale', 1));
+}
+
+async function applyPngQualityScale(page: Page, scale: number): Promise<void> {
+    const currentViewport = page.viewport() ?? { width: 1280, height: 720, deviceScaleFactor: 1 };
+    await page.setViewport({
+        width: currentViewport.width,
+        height: currentViewport.height,
+        deviceScaleFactor: scale
+    });
 }
 
 async function exportDiagramBlocksAsPng(page: Page, outputDir: string): Promise<number> {
@@ -174,6 +209,56 @@ async function exportDiagramBlocksAsPng(page: Page, outputDir: string): Promise<
         } catch {
         } finally {
             await handle.dispose();
+        }
+    }
+
+    return savedCount;
+}
+
+async function exportDiagramBlocksAsSvg(page: Page, outputDir: string): Promise<number> {
+    await fs.mkdir(outputDir, { recursive: true });
+
+    const svgSources = await page.evaluate(() => {
+        const svgNs = 'http://www.w3.org/2000/svg';
+        const globalCache = document.querySelector<SVGElement>('#MJX-SVG-global-cache');
+        const globalDefs = globalCache?.querySelector('defs')?.innerHTML ?? '';
+        const targets = document.querySelectorAll<SVGSVGElement>('.mermaid svg, .kroki-svg svg, .math-block svg');
+        return Array.from(targets).map((svg) => {
+            const cloned = svg.cloneNode(true) as SVGSVGElement;
+            const isMathSvg = Boolean(svg.closest('.math-block'));
+
+            if (!cloned.getAttribute('xmlns')) {
+                cloned.setAttribute('xmlns', svgNs);
+            }
+            if (!cloned.getAttribute('xmlns:xlink')) {
+                cloned.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            }
+
+            if (isMathSvg && globalDefs) {
+                const hasMathRef = /(?:xlink:href|href)="#MJX-/.test(cloned.outerHTML);
+                if (hasMathRef) {
+                    let defs = cloned.querySelector('defs');
+                    if (!defs) {
+                        defs = document.createElementNS(svgNs, 'defs');
+                        cloned.insertBefore(defs, cloned.firstChild);
+                    }
+                    defs.insertAdjacentHTML('beforeend', globalDefs);
+                }
+            }
+
+            return cloned.outerHTML;
+        });
+    });
+
+    let savedCount = 0;
+    for (let index = 0; index < svgSources.length; index += 1) {
+        const source = svgSources[index];
+        try {
+            const name = `diagram-${String(index + 1).padStart(3, '0')}.svg`;
+            const filePath = path.join(outputDir, name);
+            await fs.writeFile(filePath, source, 'utf8');
+            savedCount += 1;
+        } catch {
         }
     }
 
@@ -278,6 +363,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             const includeUml = config.get<boolean>('includeUml', true);
             const includeKroki = config.get<boolean>('includeKroki', true);
             const pdfFormat = config.get<'A4' | 'Letter'>('pdfFormat', 'A4');
+            const pngQualityScale = resolvePngQualityScale(config);
             const configuredTimeout = config.get<number>('renderTimeoutMilliSecond', config.get<number>('renderTimeoutMs', 10000));
             const renderTimeoutMilliSecond = Math.max(1000, configuredTimeout);
 
@@ -328,18 +414,26 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
                     vscode.window.showInformationMessage(`PDFを出力しました: ${targetUri.fsPath}`);
                 } else if (format === 'png') {
                     progress.report({ message: 'PNGを書き出しています...', increment: 15 });
+                    await applyPngQualityScale(opened.page, pngQualityScale);
                     await opened.page.screenshot({
                         path: targetUri.fsPath,
                         fullPage: true,
                         type: 'png'
                     });
                     vscode.window.showInformationMessage(`PNGを出力しました: ${targetUri.fsPath}`);
-                } else {
+                } else if (format === 'diagram-pngs') {
                     progress.report({ message: '図ブロックPNGを保存しています...', increment: 15 });
-                    const outputDir = await ensureCreatedDiagramOutputDir(targetUri.fsPath, currentFile.fsPath);
+                    await applyPngQualityScale(opened.page, pngQualityScale);
+                    const outputDir = await ensureCreatedDiagramOutputDir(targetUri.fsPath, currentFile.fsPath, 'diagram-pngs');
                     const count = await exportDiagramBlocksAsPng(opened.page, outputDir);
                     outputUriToOpen = vscode.Uri.file(outputDir);
                     vscode.window.showInformationMessage(`図ブロックPNGを保存しました: ${outputDir}（${count}件）`);
+                } else {
+                    progress.report({ message: '図ブロックSVGを保存しています...', increment: 15 });
+                    const outputDir = await ensureCreatedDiagramOutputDir(targetUri.fsPath, currentFile.fsPath, 'diagram-svgs');
+                    const count = await exportDiagramBlocksAsSvg(opened.page, outputDir);
+                    outputUriToOpen = vscode.Uri.file(outputDir);
+                    vscode.window.showInformationMessage(`図ブロックSVGを保存しました: ${outputDir}（${count}件）`);
                 }
 
                 exportCompleted = true;

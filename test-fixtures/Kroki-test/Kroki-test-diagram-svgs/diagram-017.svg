@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="font-size:initial;" class="pikchr" viewBox="0 0 292.32 76.32">
+<path d="M2.16,74.16L110.16,74.16L110.16,2.16L2.16,2.16Z" style="fill:none;stroke-width:2.16;stroke:rgb(0,0,0);"></path>
+<text x="56.16" y="38.16" text-anchor="middle" fill="rgb(0,0,0)" dominant-baseline="central">A</text>
+<polygon points="182.16,38.16 170.64,42.48 170.64,33.84" style="fill:rgb(0,0,0)"></polygon>
+<path d="M110.16,38.16L176.4,38.16" style="fill:none;stroke-width:2.16;stroke:rgb(0,0,0);"></path>
+<path d="M182.16,74.16L290.16,74.16L290.16,2.16L182.16,2.16Z" style="fill:none;stroke-width:2.16;stroke:rgb(0,0,0);"></path>
+<text x="236.16" y="38.16" text-anchor="middle" fill="rgb(0,0,0)" dominant-baseline="central">B</text>
+</svg>

@@ -13,6 +13,7 @@
     "activationEvents": [
         "onCommand:documenticMarkdown.export",
         "onCommand:documenticMarkdown.exportDiagramBlocksPng",
+        "onCommand:documenticMarkdown.exportDiagramBlocksSvg",
         "onCommand:documenticMarkdown.exportToPdf"
     ],
     "main": "./dist/extension.js",
@@ -29,6 +30,10 @@
             {
                 "command": "documenticMarkdown.exportDiagramBlocksPng",
                 "title": "Documentic: Export Diagram Blocks to PNG Folder"
+            },
+            {
+                "command": "documenticMarkdown.exportDiagramBlocksSvg",
+                "title": "Documentic: Export Diagram Blocks to SVG Folder"
             },
             {
                 "command": "documenticMarkdown.exportToPdf",
@@ -76,6 +81,16 @@
                     "default": 10000,
                     "minimum": 1000,
                     "description": "Timeout (milli second) for waiting Mermaid/Math rendering before export."
+                },
+                "documenticMarkdown.pngQuality": {
+                    "type": "string",
+                    "enum": [
+                        "low",
+                        "medium",
+                        "high"
+                    ],
+                    "default": "medium",
+                    "description": "PNG quality preset. low=1x, medium=2x, high=3x resolution scale."
                 }
             }
         }

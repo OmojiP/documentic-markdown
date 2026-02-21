@@ -11,12 +11,13 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 - UML以外のKroki対応形式（例: `graphviz`, `d2`, `erd`, `svgbob`, `vega`）もSVGとして埋め込み
 - `tex` / `latex` コードブロックを数式として描画
 - SVG埋め込み対象コードブロックを個別PNGとしてフォルダ出力
+- SVG埋め込み対象コードブロックを個別SVGとしてフォルダ出力
 
 ## 使い方
 
 1. Markdownファイルを開く
 2. コマンドパレットで `Documentic: Export Markdown` を実行
-3. 出力形式（PDF / HTML / PNG / 図ブロックPNG一括）を選択
+3. 出力形式（PDF / HTML / PNG / 図ブロックPNG一括 / 図ブロックSVG一括）を選択
 4. 保存先を選択
 
 補足: Markdownエディタ右上にも出力ボタンが表示されます。
@@ -44,6 +45,7 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 - `documenticMarkdown.pdfFormat`: `A4` or `Letter`
 - `documenticMarkdown.openOutputAfterExport`: 出力後に自動で開く（既定: true）
 - `documenticMarkdown.renderTimeoutMilliSecond`: Mermaid/Math描画待機タイムアウト（ミリ秒、既定: 10000）
+- `documenticMarkdown.pngQuality`: PNG品質プリセット（`low` / `medium` / `high`、既定: `medium`）
 
 ## 技術的な説明（簡潔版）
 
