@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { type Browser } from 'puppeteer';
+import { type Browser } from 'puppeteer-core';
 import { buildHtmlDocument, collectKrokiSvgs, createMarkdownRenderer } from './rendering';
 import {
     type ExportFormat,
