@@ -6,12 +6,95 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { PNG } from 'pngjs';
-import puppeteer, { type Browser, type Page } from 'puppeteer';
+import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 
 export type ExportFormat = 'pdf' | 'html' | 'png' | 'diagram-pngs' | 'diagram-svgs';
 export type PngQualityPreset = 'low' | 'medium' | 'high';
 
 const execFileAsync = promisify(execFile);
+
+async function fileExists(filePath: string): Promise<boolean> {
+    if (!filePath) {
+        return false;
+    }
+    try {
+        await fs.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function collectBrowserCandidates(): string[] {
+    const candidates: string[] = [];
+    const pushIfDefined = (value: string | undefined): void => {
+        if (value) {
+            candidates.push(value);
+        }
+    };
+
+    pushIfDefined(process.env.PUPPETEER_EXECUTABLE_PATH);
+    pushIfDefined(process.env.CHROME_PATH);
+
+    if (process.platform === 'win32') {
+        const localAppData = process.env.LOCALAPPDATA;
+        const programFiles = process.env.PROGRAMFILES;
+        const programFilesX86 = process.env['PROGRAMFILES(X86)'];
+
+        pushIfDefined(localAppData ? path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe') : undefined);
+        pushIfDefined(programFiles ? path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe') : undefined);
+        pushIfDefined(programFilesX86 ? path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe') : undefined);
+
+        pushIfDefined(localAppData ? path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe') : undefined);
+        pushIfDefined(programFiles ? path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe') : undefined);
+        pushIfDefined(programFilesX86 ? path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe') : undefined);
+
+        return candidates;
+    }
+
+    if (process.platform === 'darwin') {
+        candidates.push(
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
+        );
+        return candidates;
+    }
+
+    candidates.push(
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/usr/bin/microsoft-edge',
+        '/snap/bin/chromium'
+    );
+    return candidates;
+}
+
+async function resolveBrowserExecutablePath(): Promise<string> {
+    const config = vscode.workspace.getConfiguration('documenticMarkdown');
+    const configuredPath = config.get<string>('browserExecutablePath', '').trim();
+    if (configuredPath) {
+        if (await fileExists(configuredPath)) {
+            return configuredPath;
+        }
+        throw new Error(
+            `設定 documenticMarkdown.browserExecutablePath のファイルが見つかりません: ${configuredPath}`
+        );
+    }
+
+    const candidates = collectBrowserCandidates();
+    for (const candidate of candidates) {
+        if (await fileExists(candidate)) {
+            return candidate;
+        }
+    }
+
+    throw new Error(
+        'Chromium系ブラウザ実行ファイルが見つかりませんでした。' +
+        ' Chrome または Edge をインストールするか、設定 documenticMarkdown.browserExecutablePath に実行ファイルの絶対パスを指定してください。'
+    );
+}
 
 // EN: Convert $$...$$ display math blocks into ```tex code blocks for unified rendering.
 // JA: $$...$$ の数式ブロックを ```tex コードブロックに変換し、描画処理を統一します。
@@ -380,10 +463,14 @@ export async function openRenderedPage(
     tempHtmlPath: string,
     renderTimeoutMilliSecond: number
 ): Promise<{ browser: Browser; page: Page; renderErrors: string[] }> {
-    const browser = await puppeteer.launch({ headless: true });
+    const executablePath = await resolveBrowserExecutablePath();
+    const browser = await puppeteer.launch({
+        executablePath,
+        headless: true
+    });
     const page = await browser.newPage();
 
-    await page.goto(`file:///${tempHtmlPath.replace(/\\/g, '/')}`, {
+    await page.goto(pathToFileURL(tempHtmlPath).toString(), {
         waitUntil: 'networkidle0'
     });
 
