@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [0.1.4] - 2026-03-03
+
+### Added
+
+- `documenticMarkdown.browserExecutablePath` setting to explicitly specify local Chromium executable path (Chrome/Edge).
+
+### Changed
+
+- Switched browser automation runtime dependency from `puppeteer` to `puppeteer-core`.
+- Export flow now uses a local Chromium-based browser (Chrome/Edge) instead of bundled browser download behavior.
+- Improved browser executable resolution with environment variable and common install path detection.
+
+### Fixed
+
+- Improved export error reporting when Chromium executable is not found, with actionable configuration guidance.
+
 ## [0.1.2] - 2026-02-21
 
 ### Added
