@@ -72,6 +72,7 @@ npm run fixtures:export -- --network offline --quality high --clean
 - If Kroki is unavailable, affected blocks are shown as normal code blocks
 - Mermaid/Kroki SVG blocks are size-adjusted to keep visual consistency
 - Mermaid / MathJax runtimes are bundled locally in this extension (no CDN dependency)
+- PDF / PNG / diagram export requires a local Chromium-based browser (Chrome or Edge). No npm / Puppeteer installation is required on the user machine.
 
 ## Settings
 
@@ -81,6 +82,7 @@ npm run fixtures:export -- --network offline --quality high --clean
 - `documenticMarkdown.pdfFormat`: `A4` or `Letter`
 - `documenticMarkdown.openOutputAfterExport`: Auto-open output after export (default: `true`)
 - `documenticMarkdown.renderTimeoutMilliSecond`: Mermaid/Math render wait timeout in milliseconds (default: `10000`)
+- `documenticMarkdown.browserExecutablePath`: Absolute path to a Chromium-based browser executable (Chrome/Edge). If empty, common install locations are auto-detected.
 - `documenticMarkdown.pngQuality`: PNG quality preset (`low` / `medium` / `high`, default: `medium`)
 
 Notes:
@@ -124,7 +126,7 @@ This extension converts Markdown to HTML first, then exports from browser-render
 
 1. Convert Markdown to HTML with `markdown-it`
 2. Convert diagram blocks (`mermaid` / `plantuml` / `uml`) into SVG and embed
-3. Export final HTML via `puppeteer`
+3. Export final HTML via `puppeteer-core` using local Chrome/Edge
 
 ### Mermaid vs UML Blocks
 

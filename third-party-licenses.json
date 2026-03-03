@@ -7,22 +7,6 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\@antfu\\install-pkg",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\@antfu\\install-pkg\\LICENSE"
   },
-  "@babel/code-frame@7.29.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team",
-    "url": "https://babel.dev/team",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\@babel\\code-frame",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\@babel\\code-frame\\LICENSE"
-  },
-  "@babel/helper-validator-identifier@7.28.5": {
-    "licenses": "MIT",
-    "repository": "https://github.com/babel/babel",
-    "publisher": "The Babel Team",
-    "url": "https://babel.dev/team",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\@babel\\helper-validator-identifier",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\@babel\\helper-validator-identifier\\LICENSE"
-  },
   "@braintree/sanitize-url@7.1.2": {
     "licenses": "MIT",
     "repository": "https://github.com/braintree/sanitize-url",
@@ -424,15 +408,6 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\buffer-crc32",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\buffer-crc32\\LICENSE"
   },
-  "callsites@3.1.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/sindresorhus/callsites",
-    "publisher": "Sindre Sorhus",
-    "email": "sindresorhus@gmail.com",
-    "url": "sindresorhus.com",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\callsites",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\callsites\\license"
-  },
   "chevrotain-allstar@0.3.1": {
     "licenses": "MIT",
     "repository": "https://github.com/langium/chevrotain-allstar",
@@ -520,14 +495,6 @@
     "repository": "https://github.com/iVis-at-Bilkent/cose-base",
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\cytoscape-fcose\\node_modules\\cose-base",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\cytoscape-fcose\\node_modules\\cose-base\\LICENSE"
-  },
-  "cosmiconfig@9.0.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/cosmiconfig/cosmiconfig",
-    "publisher": "Daniel Fischer",
-    "email": "daniel@d-fischer.dev",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\cosmiconfig",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\cosmiconfig\\LICENSE"
   },
   "cytoscape-cose-bilkent@4.1.0": {
     "licenses": "MIT",
@@ -881,10 +848,11 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\devtools-protocol",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\devtools-protocol\\LICENSE"
   },
-  "documentic-markdown-pdf@0.0.1": {
-    "licenses": "UNKNOWN",
+  "documentic-markdown@0.1.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/OmojiP/documentic-markdown",
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\README.md"
+    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\LICENSE"
   },
   "dompurify@3.3.1": {
     "licenses": "(MPL-2.0 OR Apache-2.0)",
@@ -918,21 +886,6 @@
     "email": "me@feedic.com",
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\entities",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\entities\\LICENSE"
-  },
-  "env-paths@2.2.1": {
-    "licenses": "MIT",
-    "repository": "https://github.com/sindresorhus/env-paths",
-    "publisher": "Sindre Sorhus",
-    "email": "sindresorhus@gmail.com",
-    "url": "sindresorhus.com",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\env-paths",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\env-paths\\license"
-  },
-  "error-ex@1.3.4": {
-    "licenses": "MIT",
-    "repository": "https://github.com/qix-/node-error-ex",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\error-ex",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\error-ex\\LICENSE"
   },
   "escalade@3.2.0": {
     "licenses": "MIT",
@@ -1065,15 +1018,6 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\iconv-lite",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\iconv-lite\\LICENSE"
   },
-  "import-fresh@3.3.1": {
-    "licenses": "MIT",
-    "repository": "https://github.com/sindresorhus/import-fresh",
-    "publisher": "Sindre Sorhus",
-    "email": "sindresorhus@gmail.com",
-    "url": "https://sindresorhus.com",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\import-fresh",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\import-fresh\\license"
-  },
   "internmap@1.0.1": {
     "licenses": "ISC",
     "repository": "https://github.com/mbostock/internmap",
@@ -1099,14 +1043,6 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\ip-address",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\ip-address\\LICENSE"
   },
-  "is-arrayish@0.2.1": {
-    "licenses": "MIT",
-    "repository": "https://github.com/qix-/node-is-arrayish",
-    "publisher": "Qix",
-    "url": "http://github.com/qix-",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\is-arrayish",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\is-arrayish\\LICENSE"
-  },
   "is-fullwidth-code-point@3.0.0": {
     "licenses": "MIT",
     "repository": "https://github.com/sindresorhus/is-fullwidth-code-point",
@@ -1115,29 +1051,6 @@
     "url": "sindresorhus.com",
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\is-fullwidth-code-point",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\is-fullwidth-code-point\\license"
-  },
-  "js-tokens@4.0.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/lydell/js-tokens",
-    "publisher": "Simon Lydell",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\js-tokens",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\js-tokens\\LICENSE"
-  },
-  "js-yaml@4.1.1": {
-    "licenses": "MIT",
-    "repository": "https://github.com/nodeca/js-yaml",
-    "publisher": "Vladimir Zapparov",
-    "email": "dervus.grim@gmail.com",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\js-yaml",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\js-yaml\\LICENSE"
-  },
-  "json-parse-even-better-errors@2.3.1": {
-    "licenses": "MIT",
-    "repository": "https://github.com/npm/json-parse-even-better-errors",
-    "publisher": "Kat Marchán",
-    "email": "kzm@zkat.tech",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\json-parse-even-better-errors",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\json-parse-even-better-errors\\LICENSE.md"
   },
   "katex@0.16.28": {
     "licenses": "MIT",
@@ -1170,14 +1083,6 @@
     "repository": "https://github.com/iVis-at-Bilkent/layout-base",
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\cytoscape-fcose\\node_modules\\layout-base",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\cytoscape-fcose\\node_modules\\layout-base\\LICENSE"
-  },
-  "lines-and-columns@1.2.4": {
-    "licenses": "MIT",
-    "repository": "https://github.com/eventualbuddha/lines-and-columns",
-    "publisher": "Brian Donovan",
-    "email": "brian@donovans.cc",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\lines-and-columns",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\lines-and-columns\\LICENSE"
   },
   "linkify-it@5.0.0": {
     "licenses": "MIT",
@@ -1307,24 +1212,6 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\package-manager-detector",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\package-manager-detector\\LICENSE"
   },
-  "parent-module@1.0.1": {
-    "licenses": "MIT",
-    "repository": "https://github.com/sindresorhus/parent-module",
-    "publisher": "Sindre Sorhus",
-    "email": "sindresorhus@gmail.com",
-    "url": "sindresorhus.com",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\parent-module",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\parent-module\\license"
-  },
-  "parse-json@5.2.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/sindresorhus/parse-json",
-    "publisher": "Sindre Sorhus",
-    "email": "sindresorhus@gmail.com",
-    "url": "https://sindresorhus.com",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\parse-json",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\parse-json\\license"
-  },
   "path-data-parser@0.1.0": {
     "licenses": "MIT",
     "repository": "https://github.com/pshihn/path-data-parser",
@@ -1345,13 +1232,6 @@
     "email": "superjoe30@gmail.com",
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\pend",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\pend\\LICENSE"
-  },
-  "picocolors@1.1.1": {
-    "licenses": "ISC",
-    "repository": "https://github.com/alexeyraspopov/picocolors",
-    "publisher": "Alexey Raspopov",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\picocolors",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\picocolors\\LICENSE"
   },
   "pkg-types@1.3.1": {
     "licenses": "MIT",
@@ -1428,13 +1308,6 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\puppeteer-core",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\puppeteer-core\\README.md"
   },
-  "puppeteer@24.37.5": {
-    "licenses": "Apache-2.0",
-    "repository": "https://github.com/puppeteer/puppeteer/tree/main/packages/puppeteer",
-    "publisher": "The Chromium Authors",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\puppeteer",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\puppeteer\\README.md"
-  },
   "require-directory@2.1.1": {
     "licenses": "MIT",
     "repository": "https://github.com/troygoode/node-require-directory",
@@ -1443,15 +1316,6 @@
     "url": "http://github.com/troygoode/",
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\require-directory",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\require-directory\\LICENSE"
-  },
-  "resolve-from@4.0.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/sindresorhus/resolve-from",
-    "publisher": "Sindre Sorhus",
-    "email": "sindresorhus@gmail.com",
-    "url": "sindresorhus.com",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\resolve-from",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\resolve-from\\license"
   },
   "robust-predicates@3.0.2": {
     "licenses": "Unlicense",
@@ -1624,13 +1488,6 @@
     "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\typed-query-selector",
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\typed-query-selector\\LICENSE"
   },
-  "typescript@5.9.3": {
-    "licenses": "Apache-2.0",
-    "repository": "https://github.com/microsoft/TypeScript",
-    "publisher": "Microsoft Corp.",
-    "path": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\typescript",
-    "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\typescript\\LICENSE.txt"
-  },
   "uc.micro@2.1.0": {
     "licenses": "MIT",
     "repository": "https://github.com/markdown-it/uc.micro",
@@ -1777,4 +1634,3 @@
     "licenseFile": "C:\\Users\\kodai\\OneDrive\\ドキュメント\\src\\documentic-markdown\\node_modules\\zod\\LICENSE"
   }
 }
-

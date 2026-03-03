@@ -72,6 +72,7 @@ npm run fixtures:export -- --network offline --quality high --clean
 - Kroki が利用できない場合、Kroki対象ブロックは通常のコードブロック表示になります
 - Mermaid/Kroki のSVGは幅を揃えるようにスケール調整しています
 - Mermaid / MathJax のランタイムは拡張内同梱ライブラリを使用します（CDN依存なし）
+- PDF / PNG / 図ブロック出力には Chromium 系ブラウザ（Chrome または Edge）が必要です（npm や Puppeteer の追加インストールは不要）
 
 ## 設定
 
@@ -81,6 +82,7 @@ npm run fixtures:export -- --network offline --quality high --clean
 - `documenticMarkdown.pdfFormat`: `A4` or `Letter`
 - `documenticMarkdown.openOutputAfterExport`: 出力後に自動で開く（既定: true）
 - `documenticMarkdown.renderTimeoutMilliSecond`: Mermaid/Math描画待機タイムアウト（ミリ秒、既定: 10000）
+- `documenticMarkdown.browserExecutablePath`: Chromium系ブラウザ実行ファイル（Chrome/Edge）の絶対パス。空欄時は一般的なインストール先を自動検出
 - `documenticMarkdown.pngQuality`: PNG品質プリセット（`low` / `medium` / `high`、既定: `medium`）
 
 補足:
@@ -143,7 +145,7 @@ npm run fixtures:export -- --network offline --quality high --clean
 
 1. `markdown-it` で Markdown を HTML に変換
 2. 図ブロック（`mermaid` / `plantuml` / `uml`）を SVG 化して埋め込み
-3. `puppeteer` で最終 HTML を PDF 出力
+3. `puppeteer-core` でローカルの Chrome/Edge を使って最終 HTML を出力
 
 ### Mermaid ブロックと UML ブロックの違い
 
