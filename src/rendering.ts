@@ -175,7 +175,12 @@ export async function collectKrokiSvgs(markdown: string, options: KrokiRenderOpt
     return result;
 }
 
-export function buildHtmlDocument(markdownHtml: string, css: string, runtime: { mermaidScript: string; mathJaxScript: string }): string {
+export function buildHtmlDocument(
+    markdownHtml: string,
+    css: string,
+    runtime: { mermaidScript: string; mathJaxScript: string },
+    documentBaseHref?: string
+): string {
     // EN: Build standalone HTML with runtime hooks and completion flags for Puppeteer waits.
     // JA: Puppeteer待機用の完了フラグを含む、自己完結HTMLを組み立てます。
     return `<!DOCTYPE html>
@@ -183,6 +188,7 @@ export function buildHtmlDocument(markdownHtml: string, css: string, runtime: { 
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    ${documentBaseHref ? `<base href="${escapeHtml(documentBaseHref)}" />` : ''}
     <style>${css}</style>
   </head>
   <body>

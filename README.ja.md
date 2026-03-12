@@ -10,6 +10,7 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 - PlantUML/UMLコードブロックをSVGとして埋め込み（Kroki経由）
 - UML以外のKroki対応形式（例: `graphviz`, `d2`, `erd`, `svgbob`, `vega`）もSVGとして埋め込み
 - `tex` / `latex` コードブロックを数式として描画
+- Markdown内のローカル画像ファイルをPDF/PNG出力時にも正しく埋め込み
 - SVG埋め込み対象コードブロックを個別PNGとしてフォルダ出力
 - SVG埋め込み対象コードブロックを個別SVGとしてフォルダ出力
 

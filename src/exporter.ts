@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { pathToFileURL } from 'node:url';
 import { type Browser } from 'puppeteer-core';
 import { buildHtmlDocument, collectKrokiSvgs, createMarkdownRenderer } from './rendering';
 import {
@@ -69,6 +70,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
 
             progress.report({ message: '図を解析しています...', increment: 15 });
             const krokiSvgMap = await collectKrokiSvgs(markdownText, { includeKroki, allowExternalHttp });
+            const markdownBaseHref = pathToFileURL(path.dirname(currentFile.fsPath) + path.sep).toString();
 
             // EN: Build final HTML document that Puppeteer will render.
             // JA: Puppeteerで描画する最終HTMLドキュメントを生成します。
@@ -77,7 +79,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             const css = await fs.readFile(cssPath, 'utf8');
             const md = createMarkdownRenderer(allowRawHtml);
             const htmlBody = md.render(markdownText, { krokiSvgMap });
-            const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript });
+            const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript }, markdownBaseHref);
 
             // EN: HTML export is a fast path and does not require browser rendering.
             // JA: HTML出力はブラウザ描画を必要としないため、この時点で完了できます。

@@ -2,7 +2,7 @@
     "name": "documentic-markdown",
     "displayName": "Documentic Markdown",
     "description": "Export Markdown to Document(PDF, HTML, PNG) with Mermaid and Kroki-based diagram embedding.",
-    "version": "0.1.4",
+    "version": "0.2.0",
     "publisher": "OmojiP",
     "license": "MIT",
     "engines": {
