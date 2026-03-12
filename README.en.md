@@ -10,6 +10,7 @@ A VS Code extension to export Markdown to PDF while preserving visual layout.
 - Embed PlantUML/UML code blocks as SVG (via Kroki)
 - Embed non-UML Kroki-supported formats (e.g. `graphviz`, `d2`, `erd`, `svgbob`, `vega`) as SVG
 - Render `tex` / `latex` code blocks as math
+- Correctly embed local image files in PDF/PNG exports
 - Export SVG-embedded diagram blocks as individual PNG files
 - Export SVG-embedded diagram blocks as individual SVG files
 
