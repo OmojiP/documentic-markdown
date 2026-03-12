@@ -86,7 +86,36 @@ $$F = ma$$
 
 ## 8. 画像
 
+### URL
+
 ![sample image](https://dummyimage.com/600x120/eeeeee/333333&text=Markdown+Test)
+
+### Local file
+
+- PNG
+
+![local image](./sample-image.png)
+
+- JPEG
+
+![local image](./sample-image.jpg)
+
+- BMP
+
+![local image](./sample-image.bmp)
+
+- WebP
+
+![local image](./sample-image.webp)
+
+- GIF
+
+![local image](./sample-image.gif)
+
+- SVG
+
+![local image](./sample-image.svg)
+
 
 ## 9. 区切り線
 
