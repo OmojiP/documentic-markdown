@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [0.2.0] - 2026-03-12
+
+### Fixed
+
+- Local image files referenced from Markdown are now resolved from the source Markdown directory during PDF/PNG export, so relative image paths are embedded correctly.
+
 ## [0.1.4] - 2026-03-03
 
 ### Added
