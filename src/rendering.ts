@@ -178,8 +178,9 @@ export async function collectKrokiSvgs(markdown: string, options: KrokiRenderOpt
 export function buildHtmlDocument(
     markdownHtml: string,
     css: string,
-    runtime: { mermaidScript: string; mathJaxScript: string },
-    documentBaseHref?: string
+    runtime: { mermaidScript?: string; mathJaxScript: string },
+    documentBaseHref?: string,
+    hasMermaid: boolean = true
 ): string {
     // EN: Build standalone HTML with runtime hooks and completion flags for Puppeteer waits.
     // JA: Puppeteer待機用の完了フラグを含む、自己完結HTMLを組み立てます。
@@ -199,12 +200,12 @@ export function buildHtmlDocument(
       window.__MERMAID_RENDER_DONE__ = false;
       window.__MATH_RENDER_DONE__ = false;
       window.__RENDER_ERRORS__ = [];
-      const mermaidScriptText = ${JSON.stringify(runtime.mermaidScript)};
+      const mermaidScriptText = ${hasMermaid ? JSON.stringify(runtime.mermaidScript ?? '') : "''"};
       const mathJaxScriptText = ${JSON.stringify(runtime.mathJaxScript)};
 
       try {
         const blocks = Array.from(document.querySelectorAll('.mermaid'));
-        if (blocks.length > 0) {
+        if (blocks.length > 0 && mermaidScriptText) {
           const script = document.createElement('script');
           script.textContent = mermaidScriptText;
           document.head.appendChild(script);

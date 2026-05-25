@@ -72,6 +72,8 @@ npm run fixtures:export -- --network offline --quality high --clean
 - `tex` / `latex` blocks are rendered by MathJax as SVG
 - If Kroki is unavailable, affected blocks are shown as normal code blocks
 - Mermaid/Kroki SVG blocks are size-adjusted to keep visual consistency
+- Mermaid runtime script is omitted from exported HTML when the Markdown has no Mermaid code blocks
+- Regular images (`img`) are normalized to a fixed max width of 720px and auto-shrink on narrow layouts
 - Mermaid / MathJax runtimes are bundled locally in this extension (no CDN dependency)
 - PDF / PNG / diagram export requires a local Chromium-based browser (Chrome or Edge). No npm / Puppeteer installation is required on the user machine.
 

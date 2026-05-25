@@ -89,6 +89,13 @@ body {
     margin: 0 auto;
 }
 
+.markdown-body img {
+    display: block;
+    width: min(100%, 720px);
+    height: auto;
+    margin: 0 auto;
+}
+
 @media print {
     body {
         max-width: none;
