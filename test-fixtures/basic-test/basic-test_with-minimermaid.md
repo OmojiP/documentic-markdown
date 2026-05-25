@@ -132,3 +132,15 @@ a
 ---
 
 b
+
+
+## 7.Mermaid
+
+mermaid追加によるファイルサイズ増加の確認のため
+
+```mermaid
+classDiagram
+  class A {
+    + a string
+  }
+```

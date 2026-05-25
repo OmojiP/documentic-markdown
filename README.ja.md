@@ -72,6 +72,8 @@ npm run fixtures:export -- --network offline --quality high --clean
 - `tex` / `latex` は MathJax でSVG描画します
 - Kroki が利用できない場合、Kroki対象ブロックは通常のコードブロック表示になります
 - Mermaid/Kroki のSVGは幅を揃えるようにスケール調整しています
+- Mermaidコードブロックが存在しないMarkdownのHTML出力では、Mermaidランタイムscriptを埋め込みません
+- 通常画像（img）は幅を固定上限720pxで統一し、小さい画面では自動で縮小表示します
 - Mermaid / MathJax のランタイムは拡張内同梱ライブラリを使用します（CDN依存なし）
 - PDF / PNG / 図ブロック出力には Chromium 系ブラウザ（Chrome または Edge）が必要です（npm や Puppeteer の追加インストールは不要）
 

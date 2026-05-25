@@ -20,6 +20,10 @@ import {
     openOutputIfEnabled
 } from './export-helpers';
 
+function containsMermaidFence(markdown: string): boolean {
+    return /```\s*mermaid\b/i.test(markdown);
+}
+
 export async function exportActiveMarkdown(context: vscode.ExtensionContext, forcedFormat?: ExportFormat): Promise<void> {
     // EN: Main export orchestration from active editor to target format.
     // JA: アクティブエディタから指定形式へ出力するメイン処理です。
@@ -53,6 +57,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             // EN: Build render inputs based on workspace security/output settings.
             // JA: ワークスペース設定（セキュリティ・出力）をもとに描画入力を構築します。
             const markdownText = normalizeDisplayMathBlocks(editor.document.getText());
+            const hasMermaid = containsMermaidFence(markdownText);
             const config = vscode.workspace.getConfiguration('documenticMarkdown');
             const untrustedMarkdownProtection = config.get<boolean>('untrustedMarkdownProtection', true);
             const allowRawHtmlByConfig = config.get<boolean>('allowRawHtml', false);
@@ -65,7 +70,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             const renderTimeoutMilliSecond = Math.max(1000, configuredTimeout);
             const mermaidScriptPath = path.join(context.extensionPath, 'node_modules', 'mermaid', 'dist', 'mermaid.min.js');
             const mathJaxScriptPath = path.join(context.extensionPath, 'node_modules', 'mathjax-full', 'es5', 'tex-svg.js');
-            const mermaidScript = await fs.readFile(mermaidScriptPath, 'utf8');
+            const mermaidScript = hasMermaid ? await fs.readFile(mermaidScriptPath, 'utf8') : undefined;
             const mathJaxScript = await fs.readFile(mathJaxScriptPath, 'utf8');
 
             progress.report({ message: '図を解析しています...', increment: 15 });
@@ -79,7 +84,7 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             const css = await fs.readFile(cssPath, 'utf8');
             const md = createMarkdownRenderer(allowRawHtml);
             const htmlBody = md.render(markdownText, { krokiSvgMap });
-            const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript }, markdownBaseHref);
+            const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript }, markdownBaseHref, hasMermaid);
 
             // EN: HTML export is a fast path and does not require browser rendering.
             // JA: HTML出力はブラウザ描画を必要としないため、この時点で完了できます。
