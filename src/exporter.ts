@@ -19,6 +19,8 @@ import {
     openRenderedPage,
     openOutputIfEnabled
 } from './export-helpers';
+import { type CssTheme, loadThemeCss } from './css-theme';
+import { getOrLoadCustomCss } from './custom-css';
 
 function containsMermaidFence(markdown: string): boolean {
     return /```\s*mermaid\b/i.test(markdown);
@@ -80,8 +82,14 @@ export async function exportActiveMarkdown(context: vscode.ExtensionContext, for
             // EN: Build final HTML document that Puppeteer will render.
             // JA: Puppeteerで描画する最終HTMLドキュメントを生成します。
             progress.report({ message: 'HTMLを生成しています...', increment: 25 });
-            const cssPath = path.join(context.extensionPath, 'resources', 'github-markdown.css');
-            const css = await fs.readFile(cssPath, 'utf8');
+            const cssTheme = config.get<CssTheme>('cssTheme', 'github');
+            const customCssPathSetting = config.get<string>('customCssPath', '');
+            const themeCss = await loadThemeCss(context.extensionPath, cssTheme);
+            const { content: customCss, warning: customCssWarning } = await getOrLoadCustomCss(context, customCssPathSetting);
+            if (customCssWarning) {
+                vscode.window.showWarningMessage(customCssWarning);
+            }
+            const css = customCss ? `${themeCss}\n${customCss}` : themeCss;
             const md = createMarkdownRenderer(allowRawHtml);
             const htmlBody = md.render(markdownText, { krokiSvgMap });
             const html = buildHtmlDocument(htmlBody, css, { mermaidScript, mathJaxScript }, markdownBaseHref, hasMermaid);

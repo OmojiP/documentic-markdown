@@ -2,7 +2,7 @@
     "name": "documentic-markdown",
     "displayName": "Documentic Markdown",
     "description": "Export Markdown to Document(PDF, HTML, PNG) with Mermaid and Kroki-based diagram embedding.",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "publisher": "OmojiP",
     "license": "MIT",
     "engines": {
@@ -19,7 +19,8 @@
     "activationEvents": [
         "onCommand:documenticMarkdown.export",
         "onCommand:documenticMarkdown.exportDiagramBlocksPng",
-        "onCommand:documenticMarkdown.exportDiagramBlocksSvg"
+        "onCommand:documenticMarkdown.exportDiagramBlocksSvg",
+        "onCommand:documenticMarkdown.reloadCustomCss"
     ],
     "main": "./dist/extension.js",
     "contributes": {
@@ -39,6 +40,10 @@
             {
                 "command": "documenticMarkdown.exportDiagramBlocksSvg",
                 "title": "Documentic: Export Diagram Blocks to SVG Folder"
+            },
+            {
+                "command": "documenticMarkdown.reloadCustomCss",
+                "title": "Documentic: Reload Custom CSS"
             }
         ],
         "menus": {
@@ -110,6 +115,30 @@
                     "default": "",
                     "order": 8,
                     "description": "%config.browserExecutablePath.description%"
+                },
+                "documenticMarkdown.cssTheme": {
+                    "type": "string",
+                    "enum": [
+                        "github",
+                        "markdown-native",
+                        "labeled",
+                        "none"
+                    ],
+                    "enumDescriptions": [
+                        "%config.cssTheme.enum.github%",
+                        "%config.cssTheme.enum.markdown-native%",
+                        "%config.cssTheme.enum.labeled%",
+                        "%config.cssTheme.enum.none%"
+                    ],
+                    "default": "github",
+                    "order": 9,
+                    "description": "%config.cssTheme.description%"
+                },
+                "documenticMarkdown.customCssPath": {
+                    "type": "string",
+                    "default": "",
+                    "order": 10,
+                    "description": "%config.customCssPath.description%"
                 }
             }
         }
