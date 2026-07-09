@@ -29,8 +29,10 @@ body {
 .markdown-body h3,
 .markdown-body h5 {
     background-repeat: no-repeat;
-    background-position: 0 88%;
-    background-size: 100% 0.4em;
+    background-position: 0 50%;
+    background-size: 100% 1.2em;
+    margin-top: 0.67em;
+    margin-bottom: 0.67em;
 }
 
 .markdown-body h1 {
