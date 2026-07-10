@@ -7,5 +7,11 @@
     "config.openOutputAfterExport.description": "出力後にファイルを自動で開きます（PDF/HTMLはブラウザ、PNGは既定アプリ）。",
     "config.renderTimeoutMilliSecond.description": "出力前に Mermaid/Math の描画完了を待つタイムアウト（ミリ秒）。",
     "config.browserExecutablePath.description": "Chromium系ブラウザ実行ファイル（Chrome/Edge）の絶対パス。空欄時は一般的なインストール先を自動検出します。",
-    "config.pngQuality.description": "PNG品質プリセット。low=1x、medium=2x、high=3x の解像度スケール。"
+    "config.pngQuality.description": "PNG品質プリセット。low=1x、medium=2x、high=3x の解像度スケール。",
+    "config.cssTheme.description": "出力ドキュメントの見た目に使用するCSSテーマ。",
+    "config.cssTheme.enum.github": "GitHub風の既定テーマ。",
+    "config.cssTheme.enum.markdown-native": "見出しの前に薄いグレーでMarkdown記法（#, ## など）を表示します。",
+    "config.cssTheme.enum.labeled": "見出しレベルごとに色付きの蛍光マーカーまたは下線を交互に適用します（h1/h3/h5はマーカー、h2/h4/h6は下線）。",
+    "config.cssTheme.enum.none": "テーマCSSを適用しません（customCssPathのみ有効）。",
+    "config.customCssPath.description": "テーマCSSの後に追加適用するカスタムCSSファイルのパス（絶対パスまたはワークスペースからの相対パス）。この設定を変更したときにのみファイルを読み込んでキャッシュします。ファイルの内容変更を反映するには「Documentic: Reload Custom CSS」コマンドを実行してください。"
 }

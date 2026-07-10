@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [0.2.2] - 2026-07-09
+
+### Added
+
+- `documenticMarkdown.cssTheme` setting to choose the exported document's CSS theme: `github` (default), `markdown-native` (gray Markdown heading markers), `labeled` (colored highlighter-marker/underline alternating by heading level), or `none` (no theme CSS).
+- `documenticMarkdown.customCssPath` setting to apply a user-defined CSS file on top of the selected theme.
+- `Documentic: Reload Custom CSS` command to manually re-read the custom CSS file, since it is otherwise cached until the `customCssPath` setting value changes.
+
 ## [0.2.1] - 2026-05-25
 
 ### Changed
