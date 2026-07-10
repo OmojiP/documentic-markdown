@@ -13,6 +13,8 @@ A VS Code extension to export Markdown to PDF while preserving visual layout.
 - Correctly embed local image files in PDF/PNG exports
 - Export SVG-embedded diagram blocks as individual PNG files
 - Export SVG-embedded diagram blocks as individual SVG files
+- CSS themes for output appearance (GitHub-like / Markdown-style gray heading markers / colored heading labels / no theme)
+- Apply a user-defined custom CSS file on top of the theme CSS
 
 ## Usage
 
@@ -22,6 +24,8 @@ A VS Code extension to export Markdown to PDF while preserving visual layout.
 4. Choose destination path
 
 Note: An export button is also available on the top-right of the Markdown editor.
+
+See the Settings section for how to apply changes to the CSS theme and the custom CSS file.
 
 ## Development
 
@@ -87,11 +91,18 @@ npm run fixtures:export -- --network offline --quality high --clean
 - `documenticMarkdown.renderTimeoutMilliSecond`: Mermaid/Math render wait timeout in milliseconds (default: `10000`)
 - `documenticMarkdown.browserExecutablePath`: Absolute path to a Chromium-based browser executable (Chrome/Edge). If empty, common install locations are auto-detected.
 - `documenticMarkdown.pngQuality`: PNG quality preset (`low` / `medium` / `high`, default: `medium`)
+- `documenticMarkdown.cssTheme`: CSS theme used for the exported appearance (default: `github`)
+  - `github`: GitHub-like default theme
+  - `markdown-native`: Shows a muted gray Markdown heading marker (`#`, `##`, ...) before each heading
+  - `labeled`: Applies a colored highlighter-marker or underline to each heading, alternating by level (`h1`/`h3`/`h5` marker, `h2`/`h4`/`h6` underline)
+  - `none`: No theme CSS is applied (only `customCssPath`, if set)
+- `documenticMarkdown.customCssPath`: Path to a custom CSS file appended after the theme CSS (absolute, or relative to the workspace root; default: empty)
 
 Notes:
 
 - `untrustedMarkdownProtection`: Parent protection switch. When `true`, external fetches (Kroki) and raw HTML are blocked.
 - `allowRawHtml`: Per-feature switch for raw HTML. Effective only when `untrustedMarkdownProtection=false`.
+- `customCssPath`: The file is read and cached inside the extension only when this setting value changes. Editing the file's contents alone does not take effect automatically — run `Documentic: Reload Custom CSS` from the Command Palette to pick up the change. If the file cannot be found, the last successfully cached content is used and a warning is shown.
 
 ### What each setting can / cannot do
 

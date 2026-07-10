@@ -13,6 +13,8 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 - Markdown内のローカル画像ファイルをPDF/PNG出力時にも正しく埋め込み
 - SVG埋め込み対象コードブロックを個別PNGとしてフォルダ出力
 - SVG埋め込み対象コードブロックを個別SVGとしてフォルダ出力
+- 出力の見た目を選べるCSSテーマ（GitHub風 / Markdown風のグレー装飾 / 見出しレベルの色付きラベル / CSSなし）
+- テーマCSSの上にユーザー定義CSSファイルを追加適用
 
 ## 使い方
 
@@ -22,6 +24,8 @@ Markdownを見た目付きでPDF化するVS Code拡張です。
 4. 保存先を選択
 
 補足: Markdownエディタ右上にも出力ボタンが表示されます。
+
+CSSテーマとユーザー定義CSSファイルを変更した場合の反映方法は「設定」セクションを参照してください。
 
 ## 開発手順
 
@@ -87,11 +91,18 @@ npm run fixtures:export -- --network offline --quality high --clean
 - `documenticMarkdown.renderTimeoutMilliSecond`: Mermaid/Math描画待機タイムアウト（ミリ秒、既定: 10000）
 - `documenticMarkdown.browserExecutablePath`: Chromium系ブラウザ実行ファイル（Chrome/Edge）の絶対パス。空欄時は一般的なインストール先を自動検出
 - `documenticMarkdown.pngQuality`: PNG品質プリセット（`low` / `medium` / `high`、既定: `medium`）
+- `documenticMarkdown.cssTheme`: 出力に使うCSSテーマ（既定: `github`）
+  - `github`: GitHub風の既定テーマ
+  - `markdown-native`: 見出しの前に薄いグレーでMarkdown記法（`#`, `##` など）を表示
+  - `labeled`: 見出しレベルごとに色付きの蛍光マーカーまたは下線を交互に適用（`h1`/`h3`/`h5` はマーカー、`h2`/`h4`/`h6` は下線）
+  - `none`: テーマCSSを適用しない（`customCssPath` のみ有効）
+- `documenticMarkdown.customCssPath`: テーマCSSの後に追加適用するカスタムCSSファイルのパス（絶対パス、またはワークスペースルートからの相対パス。既定: 空欄）
 
 補足:
 
 - `untrustedMarkdownProtection`: 保護モードの親スイッチです。`true` の間は外部通信（Kroki）と生HTMLを抑止します。
 - `allowRawHtml`: 生HTMLの個別許可スイッチです。`untrustedMarkdownProtection=false` のときだけ有効になります。
+- `customCssPath`: 指定したCSSファイルは、この設定値を変更したタイミングでのみ読み込まれ、拡張内部にキャッシュされます。ファイルの中身だけを編集しても自動では反映されません。反映するにはコマンドパレットから `Documentic: Reload Custom CSS` を実行してください。ファイルが見つからない場合は、直前に読み込めていた内容をキャッシュから使用し、警告メッセージを表示します。
 
 ### 設定で「できること / できないこと」
 
